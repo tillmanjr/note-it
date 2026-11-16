@@ -1,0 +1,129 @@
+.app {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 12px 16px 40px;
+}
+
+.toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.toolbar .group {
+  display: flex;
+  gap: 2px;
+  padding-right: 6px;
+  border-right: 1px solid var(--border);
+  align-items: center;
+}
+.toolbar .group:last-child { border-right: none; }
+.toolbar button,
+.spike-actions button,
+.toolbar select {
+  font: inherit;
+  font-size: 13px;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+.toolbar select { border-color: var(--border); background: var(--bg); }
+.toolbar button:hover, .spike-actions button:hover { background: var(--hover); }
+.toolbar button.active { background: var(--active); border-color: var(--accent); }
+.toolbar .swatch { min-width: 18px; width: 18px; height: 18px; padding: 0; border: 1px solid var(--border); border-radius: 3px; }
+.toolbar .swatch.hl { border-radius: 9px; }
+
+.spike-actions { display: flex; gap: 6px; margin: 8px 0; }
+.spike-actions button { border-color: var(--border); }
+
+.layout { display: grid; grid-template-columns: 1fr; gap: 16px; }
+.layout.with-debug { grid-template-columns: minmax(0, 1fr) minmax(0, 420px); }
+
+.note {
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 24px 32px;
+  min-height: 70vh;
+}
+
+.debug { font-size: 12px; overflow: auto; max-height: 85vh; position: sticky; top: 60px; }
+.debug h3 { margin: 12px 0 4px; font-size: 13px; }
+.debug pre {
+  white-space: pre-wrap;
+  word-break: break-all;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  padding: 8px;
+  border-radius: 4px;
+  max-height: 40vh;
+  overflow: auto;
+}
+.debug pre.ok { color: #27ae60; }
+.debug pre.bad { color: #c0392b; }
+
+/* ---------- Note content ---------- */
+.tiptap {
+  outline: none;
+  font-size: 15px;
+  line-height: 1.55;
+}
+.tiptap > * + * { margin-top: 0.4em; }
+.tiptap p { margin: 0; }
+.tiptap h1, .tiptap h2, .tiptap h3 { line-height: 1.25; margin: 0.8em 0 0.3em; }
+.tiptap ul, .tiptap ol { padding-left: 1.6em; margin: 0.2em 0; }
+.tiptap a { color: var(--accent); }
+.tiptap mark { color: #1f1f1f !important; /* Highlight renders inline color: inherit */ border-radius: 2px; padding: 0 1px; }
+.tiptap code { background: var(--panel); padding: 1px 4px; border-radius: 3px; font-size: 0.9em; }
+.tiptap pre { background: var(--panel); padding: 10px 12px; border-radius: 6px; overflow-x: auto; }
+.tiptap pre code { background: none; padding: 0; }
+.tiptap hr { border: none; border-top: 1px solid var(--border); margin: 1em 0; }
+.tiptap img { max-width: 100%; height: auto; }
+.tiptap img.ProseMirror-selectednode { outline: 2px solid var(--accent); }
+.tiptap blockquote { border-left: 3px solid var(--border); margin: 0; padding-left: 12px; color: var(--muted); }
+
+ul[data-type='taskList'] { list-style: none; padding-left: 0.2em; }
+ul[data-type='taskList'] li { display: flex; gap: 8px; align-items: flex-start; }
+ul[data-type='taskList'] li > label { flex: 0 0 auto; margin-top: 0.2em; user-select: none; }
+ul[data-type='taskList'] li > div { flex: 1 1 auto; }
+ul[data-type='taskList'] li[data-checked='true'] > div > p { text-decoration: line-through; color: var(--muted); }
+ul[data-type='taskList'] ul[data-type='taskList'] { padding-left: 1.4em; }
+
+.tiptap table { border-collapse: collapse; table-layout: fixed; width: 100%; margin: 0.6em 0; overflow: hidden; }
+.tiptap td, .tiptap th {
+  border: 1px solid var(--border);
+  padding: 4px 8px;
+  vertical-align: top;
+  position: relative;
+  min-width: 1em;
+}
+.tiptap th { background: var(--panel); font-weight: 600; text-align: left; }
+.tiptap .selectedCell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(41, 128, 185, 0.15);
+  pointer-events: none;
+}
+.tiptap .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--accent);
+  pointer-events: none;
+}
+.tiptap.resize-cursor { cursor: col-resize; }
+.tableWrapper { overflow-x: auto; }

@@ -79,6 +79,8 @@
   font-size: 15px;
   line-height: 1.55;
 }
+/* Translucent selection that keeps each run's own text color, so color changes are visible while selected. */
+.tiptap ::selection { color: currentColor; background: rgba(35, 112, 184, 0.35); }
 .tiptap > * + * { margin-top: 0.4em; }
 .tiptap p { margin: 0; }
 .tiptap h1, .tiptap h2, .tiptap h3 { line-height: 1.25; margin: 0.8em 0 0.3em; }

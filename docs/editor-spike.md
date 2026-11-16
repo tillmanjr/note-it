@@ -8,8 +8,8 @@ sync, storage or mobile. Code: `spike/editor` (`npm install && npm run dev`).
 - **Schema** (`src/editorExtensions.ts`): StarterKit (headings, lists, bold/italic/underline/strike,
   code, links, rules, undo), nested task lists, tables (resizable), images, text style (font family,
   size, color, background), multicolor highlight, alignment, and two custom extensions.
-- **Real indentation** (`src/extensions/indent.ts`): numeric `indent` attribute (0–10) on paragraphs
-  and headings, rendered as `margin-left` + `data-indent`. Tab / Shift-Tab indent and outdent;
+- **Real indentation** (`src/extensions/indent.ts`): numeric `indent` attribute (0–10) on paragraphs,
+  headings and code blocks (so converting between them keeps the indent), rendered as `margin-left` + `data-indent`. Tab / Shift-Tab indent and outdent;
   Backspace at the start of an indented block outdents. In lists Tab nests items; in tables Tab
   moves between cells. Pasted `margin-left` / `padding-left` (px, pt, em) is converted to levels at 40px each,
   which matches Evernote's ENML indentation.
@@ -21,7 +21,8 @@ sync, storage or mobile. Code: `spike/editor` (`npm install && npm run dev`).
   `dom.style.cssText`, so browsers rewrite hex colors to `rgb()`. All colors are stored as lowercase hex
   (transparent → none), from both parsing and commands.
 - **Selection format bar** (`src/SelectionFormatBar.tsx`): right-click inside selected text opens a
-  compact bar above it (font size, bold, italic, code, text color, highlight). It stays open while
+  compact bar above it: text style (Normal Text, H1–H3, Code block), bold, italic, inline code,
+  text color, highlight. It stays open while
   formatting and closes on selection change, Escape or blur. Right-click elsewhere, or
   Shift+right-click, keeps the browser's context menu.
 - **Canonical JSON** (`src/canonical.ts`): `""` and `null` both mean "unset" for TipTap text-style

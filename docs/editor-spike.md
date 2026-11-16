@@ -21,7 +21,7 @@ sync, storage or mobile. Code: `spike/editor` (`npm install && npm run dev`).
   `dom.style.cssText`, so browsers rewrite hex colors to `rgb()`. All colors are stored as lowercase hex
   (transparent → none), from both parsing and commands.
 - **Selection format bar** (`src/SelectionFormatBar.tsx`): right-click inside selected text opens a
-  compact bar above it: text style (Normal Text, H1–H3, Code block), bold, italic, inline code,
+  compact bar above it: text style (Normal Text, Heading Large/Medium/Small, Code block), bold, italic, inline code,
   text color, highlight. It stays open while
   formatting and closes on selection change, Escape or blur. Right-click elsewhere, or
   Shift+right-click, keeps the browser's context menu.

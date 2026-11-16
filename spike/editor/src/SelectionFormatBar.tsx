@@ -9,9 +9,9 @@ type BlockStyle = 'paragraph' | 'h1' | 'h2' | 'h3' | 'code'
 
 const BLOCK_STYLES: { value: BlockStyle; label: string }[] = [
   { value: 'paragraph', label: 'Normal Text' },
-  { value: 'h1', label: 'H1' },
-  { value: 'h2', label: 'H2' },
-  { value: 'h3', label: 'H3' },
+  { value: 'h1', label: 'Heading Large' },
+  { value: 'h2', label: 'Heading Medium' },
+  { value: 'h3', label: 'Heading Small' },
   { value: 'code', label: 'Code' },
 ]
 

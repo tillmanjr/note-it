@@ -6,6 +6,7 @@ import { noteExtensions } from './editorExtensions'
 import { SAMPLE_NOTE } from './sample'
 import { COLORS, FONTS, HIGHLIGHTS, SIZES } from './formatting'
 import { SelectionFormatBar } from './SelectionFormatBar'
+import { BlockStyleSelect } from './BlockStyleSelect'
 import './App.css'
 
 // Spike-only persistence; the real app stores Yjs documents in SQLite.
@@ -112,13 +113,9 @@ function Toolbar({ editor }: { editor: Editor }) {
       highlight: e.isActive('highlight'),
       code: e.isActive('code'),
       link: e.isActive('link'),
-      h1: e.isActive('heading', { level: 1 }),
-      h2: e.isActive('heading', { level: 2 }),
-      h3: e.isActive('heading', { level: 3 }),
       bullet: e.isActive('bulletList'),
       ordered: e.isActive('orderedList'),
       task: e.isActive('taskList'),
-      codeBlock: e.isActive('codeBlock'),
       table: e.isActive('table'),
       left: e.isActive({ textAlign: 'left' }),
       center: e.isActive({ textAlign: 'center' }),
@@ -177,9 +174,7 @@ function Toolbar({ editor }: { editor: Editor }) {
         {btn('⌫', false, () => c().unsetAllMarks().run(), 'Clear formatting')}
       </div>
       <div className="group">
-        {btn('H1', s.h1, () => c().toggleHeading({ level: 1 }).run())}
-        {btn('H2', s.h2, () => c().toggleHeading({ level: 2 }).run())}
-        {btn('H3', s.h3, () => c().toggleHeading({ level: 3 }).run())}
+        <BlockStyleSelect editor={editor} />
       </div>
       <div className="group">
         {btn('•', s.bullet, () => c().toggleBulletList().run(), 'Bulleted list')}
@@ -194,7 +189,6 @@ function Toolbar({ editor }: { editor: Editor }) {
         {btn('⯈', s.right, () => c().setTextAlign('right').run(), 'Align right')}
       </div>
       <div className="group">
-        {btn('{ }', s.codeBlock, () => c().toggleCodeBlock().run(), 'Code block')}
         {btn('―', false, () => c().setHorizontalRule().run(), 'Divider')}
         {btn('⊞', s.table, () => c().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(), 'Insert table')}
         {s.table && (

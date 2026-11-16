@@ -1,22 +1,12 @@
 import { useEffect, useRef } from 'react'
 import { useEditorState, type Editor } from '@tiptap/react'
 import { BubbleMenu } from '@tiptap/react/menus'
+import { BlockStyleSelect } from './BlockStyleSelect'
 import { COLORS, HIGHLIGHTS } from './formatting'
 
 const PLUGIN_KEY = 'selectionFormatBar'
 
-type BlockStyle = 'paragraph' | 'h1' | 'h2' | 'h3' | 'code'
-
-const BLOCK_STYLES: { value: BlockStyle; label: string }[] = [
-  { value: 'paragraph', label: 'Normal Text' },
-  { value: 'h1', label: 'Heading Large' },
-  { value: 'h2', label: 'Heading Medium' },
-  { value: 'h3', label: 'Heading Small' },
-  { value: 'code', label: 'Code' },
-]
-
 // A compact format bar shown above the selection when the user right-clicks inside it.
-// The style dropdown applies paragraph / heading / code block to the touched blocks.
 // It stays open while formats are applied and closes when the selection changes, on
 // Escape, or when focus leaves. Shift+right-click keeps the native context menu.
 export function SelectionFormatBar({ editor }: { editor: Editor }) {
@@ -76,15 +66,6 @@ export function SelectionFormatBar({ editor }: { editor: Editor }) {
       bold: e.isActive('bold'),
       italic: e.isActive('italic'),
       code: e.isActive('code'),
-      block: (e.isActive('codeBlock')
-        ? 'code'
-        : e.isActive('heading', { level: 1 })
-          ? 'h1'
-          : e.isActive('heading', { level: 2 })
-            ? 'h2'
-            : e.isActive('heading', { level: 3 })
-              ? 'h3'
-              : 'paragraph') as BlockStyle,
       color: (e.getAttributes('textStyle').color as string) ?? '',
       highlight: (e.getAttributes('highlight').color as string) ?? '',
     }),
@@ -93,17 +74,6 @@ export function SelectionFormatBar({ editor }: { editor: Editor }) {
   const c = () => editor.chain().focus()
   const keepSelection = (ev: React.MouseEvent) => ev.preventDefault()
 
-  // Block styles apply to the whole block(s) the selection touches, as in Evernote.
-  const setBlock = (block: BlockStyle) => {
-    switch (block) {
-      case 'paragraph':
-        return c().setParagraph().run()
-      case 'code':
-        return c().setCodeBlock().run()
-      default:
-        return c().setHeading({ level: Number(block[1]) as 1 | 2 | 3 }).run()
-    }
-  }
 
   return (
     <BubbleMenu
@@ -122,13 +92,7 @@ export function SelectionFormatBar({ editor }: { editor: Editor }) {
         return true
       }}
     >
-      <select value={s.block} title="Text style" onChange={(e) => setBlock(e.target.value as BlockStyle)}>
-        {BLOCK_STYLES.map((b) => (
-          <option key={b.value} value={b.value}>
-            {b.label}
-          </option>
-        ))}
-      </select>
+      <BlockStyleSelect editor={editor} />
       <span className="sep" />
       <button className={s.bold ? 'active' : ''} title="Bold" onMouseDown={keepSelection} onClick={() => c().toggleBold().run()}>
         <b>B</b>

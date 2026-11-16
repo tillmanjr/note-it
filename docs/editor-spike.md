@@ -20,8 +20,13 @@ sync, storage or mobile. Code: `spike/editor` (`npm install && npm run dev`).
 - **Canonical colors** (`src/extensions/colors.ts`): ProseMirror writes `style` through
   `dom.style.cssText`, so browsers rewrite hex colors to `rgb()`. All colors are stored as lowercase hex
   (transparent → none), from both parsing and commands.
+- **Text style dropdown** (`src/BlockStyleSelect.tsx`), shared by the main toolbar and the format
+  bar: Normal Text, Monospaced, Heading Large/Medium/Small, Code. Styles apply to whole blocks.
+- **Monospaced** (`src/extensions/monospace.ts`): a paragraph flag rendered in a predefined
+  fixed-width font stack. Unlike Code it keeps marks and indent; Enter continues it. Pasted/imported
+  paragraphs whose font-family is monospace (Courier, Consolas, …) are recognized as Monospaced.
 - **Selection format bar** (`src/SelectionFormatBar.tsx`): right-click inside selected text opens a
-  compact bar above it: text style (Normal Text, Heading Large/Medium/Small, Code block), bold, italic, inline code,
+  compact bar above it: text style dropdown, bold, italic, inline code,
   text color, highlight. It stays open while
   formatting and closes on selection change, Escape or blur. Right-click elsewhere, or
   Shift+right-click, keeps the browser's context menu.

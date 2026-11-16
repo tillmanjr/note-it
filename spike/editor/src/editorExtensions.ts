@@ -8,6 +8,7 @@ import TextAlign from '@tiptap/extension-text-align'
 import Highlight from '@tiptap/extension-highlight'
 import { CanonicalBackgroundColor, CanonicalColor } from './extensions/colors'
 import { Indent } from './extensions/indent'
+import { Monospace } from './extensions/monospace'
 import { Paste, type PasteOptions } from './extensions/paste'
 
 // The note schema. Shared by the live editor and the headless round-trip check.
@@ -26,6 +27,7 @@ export function noteExtensions(paste: PasteOptions = {}): Extensions {
     Highlight.configure({ multicolor: true }),
     TextAlign.configure({ types: ['heading', 'paragraph'] }),
     Indent,
+    Monospace,
     Paste.configure(paste),
   ]
 }

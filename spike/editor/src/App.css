@@ -163,3 +163,4 @@ ul[data-type='taskList'] ul[data-type='taskList'] { padding-left: 1.4em; }
 .format-bar .swatch.active { outline: 2px solid var(--accent); outline-offset: 1px; }
 .format-bar .swatch.none { background: linear-gradient(135deg, transparent 45%, #c0392b 45%, #c0392b 55%, transparent 55%); }
 .format-bar .sep { width: 1px; align-self: stretch; margin: 2px 4px; background: var(--border); }
+.tiptap p[data-monospace] { font-size: 0.93em; }

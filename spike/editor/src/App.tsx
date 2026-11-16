@@ -4,6 +4,8 @@ import { generateJSON, type JSONContent } from '@tiptap/core'
 import { canonicalize } from './canonical'
 import { noteExtensions } from './editorExtensions'
 import { SAMPLE_NOTE } from './sample'
+import { COLORS, FONTS, HIGHLIGHTS, SIZES } from './formatting'
+import { SelectionFormatBar } from './SelectionFormatBar'
 import './App.css'
 
 // Spike-only persistence; the real app stores Yjs documents in SQLite.
@@ -26,11 +28,6 @@ function save(json: JSONContent) {
     // storage unavailable or full (large pasted images); spike ignores
   }
 }
-
-const FONTS = ['', 'Arial', 'Georgia', 'Times New Roman', 'Courier New', 'Verdana', 'Trebuchet MS']
-const SIZES = ['', '10px', '12px', '14px', '16px', '18px', '20px', '24px', '30px', '36px']
-const COLORS = ['#000000', '#c0392b', '#d35400', '#27ae60', '#2980b9', '#8e44ad', '#7f8c8d']
-const HIGHLIGHTS = ['#fff3a3', '#c8f7c5', '#cfe8ff', '#ffd6e7']
 
 export default function App() {
   const [rawPaste, setRawPaste] = useState('')
@@ -78,6 +75,7 @@ export default function App() {
       <div className={showDebug ? 'layout with-debug' : 'layout'}>
         <div className="note">
           <EditorContent editor={editor} />
+          <SelectionFormatBar editor={editor} />
         </div>
         {showDebug && <DebugPane editor={editor} rawPaste={rawPaste} roundTrip={roundTrip} />}
       </div>

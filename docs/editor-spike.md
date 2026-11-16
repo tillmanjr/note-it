@@ -20,6 +20,10 @@ sync, storage or mobile. Code: `spike/editor` (`npm install && npm run dev`).
 - **Canonical colors** (`src/extensions/colors.ts`): ProseMirror writes `style` through
   `dom.style.cssText`, so browsers rewrite hex colors to `rgb()`. All colors are stored as lowercase hex
   (transparent → none), from both parsing and commands.
+- **Selection format bar** (`src/SelectionFormatBar.tsx`): right-click inside selected text opens a
+  compact bar above it (font size, bold, italic, code, text color, highlight). It stays open while
+  formatting and closes on selection change, Escape or blur. Right-click elsewhere, or
+  Shift+right-click, keeps the browser's context menu.
 - **Canonical JSON** (`src/canonical.ts`): `""` and `null` both mean "unset" for TipTap text-style
   attributes; documents are canonicalized before saving or comparing.
 
@@ -30,6 +34,8 @@ sync, storage or mobile. Code: `spike/editor` (`npm install && npm run dev`).
   color + font family kept as marks, 1×1 tracking images removed.
 - JSON → HTML → JSON is lossless for the sample note plus pasted headings, tables, nested
   ordered lists, colors, fonts and sizes ("Check HTML round-trip" button).
+
+User-verified: pasting GitHub repo lists and tables works well; text color is visible while selected.
 
 ## For you to evaluate by hand
 

@@ -102,7 +102,7 @@ Nice to have later: due dates/reminders, OCR in images/PDFs, saved searches, not
 
 ## Milestones
 
-Progress: milestone 1 spike lives in `spike/editor`; see [`editor-spike.md`](editor-spike.md).
+Progress: milestone 1 spike done (`spike/editor`, [`editor-spike.md`](editor-spike.md)). Milestone 2 plan: [`milestone-2.md`](milestone-2.md).
 
 1. **Editor spike**: TipTap with the indentation, nesting, checklist, table and paste-from-web behavior.
    Confirm it feels at least as good as Evernote.

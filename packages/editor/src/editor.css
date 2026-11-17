@@ -1,0 +1,132 @@
+/* Editor, toolbar and format bar styles. Expects the theme tokens defined by the host app. */
+
+.toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.toolbar .group {
+  display: flex;
+  gap: 2px;
+  padding-right: 6px;
+  border-right: 1px solid var(--border);
+  align-items: center;
+}
+.toolbar .group:last-child { border-right: none; }
+.toolbar button,
+.toolbar select {
+  font: inherit;
+  font-size: 13px;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+.toolbar select { border-color: var(--border); background: var(--bg); }
+.toolbar button:hover { background: var(--hover); }
+.toolbar button.active { background: var(--active); border-color: var(--accent); }
+.toolbar .swatch { min-width: 18px; width: 18px; height: 18px; padding: 0; border: 1px solid var(--border); border-radius: 3px; }
+.toolbar .swatch.hl { border-radius: 9px; }
+
+/* ---------- Note content ---------- */
+.tiptap {
+  outline: none;
+  font-size: 15px;
+  line-height: 1.55;
+}
+/* Translucent selection that keeps each run's own text color, so color changes are visible while selected. */
+.tiptap ::selection { color: currentColor; background: rgba(35, 112, 184, 0.35); }
+.tiptap > * + * { margin-top: 0.4em; }
+.tiptap p { margin: 0; }
+.tiptap h1, .tiptap h2, .tiptap h3 { line-height: 1.25; margin: 0.8em 0 0.3em; }
+.tiptap ul, .tiptap ol { padding-left: 1.6em; margin: 0.2em 0; }
+.tiptap a { color: var(--accent); }
+.tiptap mark { color: #1f1f1f !important; /* Highlight renders inline color: inherit */ border-radius: 2px; padding: 0 1px; }
+.tiptap code { background: var(--panel); padding: 1px 4px; border-radius: 3px; font-size: 0.9em; }
+.tiptap pre { background: var(--panel); padding: 10px 12px; border-radius: 6px; overflow-x: auto; }
+.tiptap pre code { background: none; padding: 0; }
+.tiptap hr { border: none; border-top: 1px solid var(--border); margin: 1em 0; }
+.tiptap img { max-width: 100%; height: auto; }
+.tiptap img.ProseMirror-selectednode { outline: 2px solid var(--accent); }
+.tiptap blockquote { border-left: 3px solid var(--border); margin: 0; padding-left: 12px; color: var(--muted); }
+
+ul[data-type='taskList'] { list-style: none; padding-left: 0.2em; }
+ul[data-type='taskList'] li { display: flex; gap: 8px; align-items: flex-start; }
+ul[data-type='taskList'] li > label { flex: 0 0 auto; margin-top: 0.2em; user-select: none; }
+ul[data-type='taskList'] li > div { flex: 1 1 auto; }
+ul[data-type='taskList'] li[data-checked='true'] > div > p { text-decoration: line-through; color: var(--muted); }
+ul[data-type='taskList'] ul[data-type='taskList'] { padding-left: 1.4em; }
+
+.tiptap table { border-collapse: collapse; table-layout: fixed; width: 100%; margin: 0.6em 0; overflow: hidden; }
+.tiptap td, .tiptap th {
+  border: 1px solid var(--border);
+  padding: 4px 8px;
+  vertical-align: top;
+  position: relative;
+  min-width: 1em;
+}
+.tiptap th { background: var(--panel); font-weight: 600; text-align: left; }
+.tiptap .selectedCell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(41, 128, 185, 0.15);
+  pointer-events: none;
+}
+.tiptap .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--accent);
+  pointer-events: none;
+}
+.tiptap.resize-cursor { cursor: col-resize; }
+.tableWrapper { overflow-x: auto; }
+
+/* ---------- Selection format bar (right-click on selected text) ---------- */
+.format-bar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 6px;
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  z-index: 20;
+}
+.format-bar button,
+.format-bar select {
+  font: inherit;
+  font-size: 13px;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 5px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+.format-bar select { border-color: var(--border); background: var(--bg); }
+.format-bar button:hover { background: var(--hover); }
+.format-bar button.active { background: var(--active); border-color: var(--accent); }
+.format-bar .swatch { min-width: 16px; width: 16px; height: 16px; padding: 0; border: 1px solid var(--border); border-radius: 3px; }
+.format-bar .swatch.hl { border-radius: 8px; }
+.format-bar .swatch.active { outline: 2px solid var(--accent); outline-offset: 1px; }
+.format-bar .swatch.none { background: linear-gradient(135deg, transparent 45%, #c0392b 45%, #c0392b 55%, transparent 55%); }
+.format-bar .sep { width: 1px; align-self: stretch; margin: 2px 4px; background: var(--border); }
+.tiptap p[data-monospace] { font-size: 0.93em; }

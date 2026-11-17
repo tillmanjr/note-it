@@ -1,5 +1,7 @@
 import { Extension } from '@tiptap/core'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
+import { CONTRAST_MAX } from '../formatting'
+import { toHexColor } from './colors'
 
 // Paste fidelity: the "web clipper" is copy/paste from a browser, so pasted HTML is
 // cleaned up before ProseMirror parses it against the schema, and pasted/dropped
@@ -10,6 +12,18 @@ export interface PasteOptions {
   onRawHtml?: (html: string) => void
   /** Stores pasted/dropped image files and returns the `src` for each. Default: inline data URLs. */
   storeImages?: (files: File[]) => Promise<string[]>
+}
+
+/**
+ * Black or near-black neutral text (#000, #1f1f1f, #333…): every channel ≤ 0x40 and channels within
+ * 24 of each other, so dark navy/red/green keep their color.
+ */
+export function isNearBlack(color: string): boolean {
+  const hex = color.trim().toLowerCase() === 'black' ? '#000000' : toHexColor(color)
+  const m = hex?.match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/)
+  if (!m) return false
+  const channels = m.slice(1).map((c) => parseInt(c, 16))
+  return Math.max(...channels) <= 0x40 && Math.max(...channels) - Math.min(...channels) <= 24
 }
 
 export function cleanPastedHtml(html: string): string {
@@ -38,9 +52,11 @@ export function cleanPastedHtml(html: string): string {
     if (decoration.includes('line-through')) wrap('s')
 
     // Keep only styles the schema represents; otherwise TextStyle turns every styled span into an empty mark.
+    // Black body text becomes "maximum contrast" so it stays readable in dark mode.
     const kept = ['color', 'background-color', 'font-family', 'font-size']
       .map((prop) => [prop, s.getPropertyValue(prop)] as const)
       .filter(([, v]) => v && v !== 'inherit' && v !== 'initial')
+      .map(([p, v]) => [p, p === 'color' && isNearBlack(v) ? CONTRAST_MAX : v] as const)
     if (kept.length === 0) span.replaceWith(...Array.from(span.childNodes))
     else span.setAttribute('style', kept.map(([p, v]) => `${p}: ${v}`).join('; '))
   })

@@ -4,6 +4,7 @@ import * as Y from 'yjs'
 import { md5 } from '@noble/hashes/legacy.js'
 import { bytesToHex } from '@noble/hashes/utils.js'
 import { NoteStore, type BlobStore, type SqlDriver } from '@tdjr/core'
+import { CONTRAST_MAX, isNearBlack } from '@tdjr/editor'
 import { convertNote, importNotes, notebookNameFromFile, parseEnex, parseEnexDate, type MediaRef } from './index'
 import type { JSONContent } from '@tiptap/core'
 
@@ -144,6 +145,28 @@ describe('ENML conversion', () => {
     expect(JSON.stringify(table)).toContain('"bold"')
     expect(JSON.stringify(blocks(json)[1])).toContain('#c0392b')
     expect(stats.tables).toBe(1)
+  })
+
+  it('maps black and near-black text to maximum contrast, keeping other colors', () => {
+    const { json } = convert(
+      '<div><font color="#000000">black</font> <span style="color: rgb(34, 34, 34)">dark gray</span> ' +
+        '<span style="color: black">named</span> <span style="color: #1a237e">navy</span> ' +
+        '<span style="color: #ffffff">white</span> <span style="color: #c0392b">red</span></div>',
+    )
+    const colors = blocks(json)[0].content!.filter((c) => c.text?.trim()).map((c) => [c.text, c.marks?.[0]?.attrs?.color])
+    expect(colors).toEqual([
+      ['black', CONTRAST_MAX],
+      ['dark gray', CONTRAST_MAX],
+      ['named', CONTRAST_MAX],
+      ['navy', '#1a237e'],
+      ['white', '#ffffff'],
+      ['red', '#c0392b'],
+    ])
+  })
+
+  it('classifies near-black neutrals only', () => {
+    for (const c of ['#000', '#000000', 'black', '#1f1f1f', '#333333', 'rgb(64, 64, 64)']) expect(isNearBlack(c), c).toBe(true)
+    for (const c of ['#444444', '#1a237e', '#3b0000', '#ffffff', 'red', 'var(--note-max, #000000)']) expect(isNearBlack(c), c).toBe(false)
   })
 
   it('produces a Yjs body that restores the same document', () => {

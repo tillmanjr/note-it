@@ -97,7 +97,9 @@ ENML mapping:
   1×1 spacer images are dropped; media missing from the export leaves a visible ⚠ marker and a
   report warning. Remote `<img>` URLs from web clips are kept as links (not downloaded).
 - Tables (incl. merged cells), lists, headings, links and inline formatting go through the same
-  cleanup as pasted HTML.
+  cleanup as pasted HTML. Black / near-black neutral text (every channel ≤ 0x40, channels within 24)
+  becomes the theme-aware "maximum contrast" color, so it stays readable in dark mode; other colors
+  are kept as-is.
 
 Verified against three real exports (105 notes): all imported with no text loss
 (`ENEX_DIR=… npx vitest run real-exports` in `packages/enex`; the test is git-ignored and prints counts

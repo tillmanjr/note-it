@@ -135,6 +135,23 @@ describe('full-text search', () => {
     expect((await store.getNote(n2.id))?.snippet).toBe('Buy café beans and oat milk')
   })
 
+  it('ranks title matches first, scopes, and highlights excerpts', async () => {
+    const work = await store.createNotebook('Work')
+    const home = await store.createNotebook('Home')
+    const inBody = await store.createNote(work.id, 'Meeting notes')
+    await store.indexNoteText(inBody.id, 'We discussed the budget for the kitchen and then lunch')
+    const inTitle = await store.createNote(home.id, 'Kitchen ideas')
+    await store.indexNoteText(inTitle.id, 'Tiles and lights')
+    const trashed = await store.createNote(home.id, 'Kitchen old')
+    await store.trashNote(trashed.id)
+
+    const hits = await store.searchNotes('kitchen')
+    expect(hits.map((h) => h.note.id)).toEqual([inTitle.id, inBody.id])
+    expect(hits[1].excerpt).toContain('kitchen')
+    expect((await store.searchNotes('kitchen', { notebookId: work.id })).map((h) => h.note.id)).toEqual([inBody.id])
+    expect(await store.searchNotes('  ')).toEqual([])
+  })
+
   it('escapes quotes in user input', () => {
     expect(ftsQuery('say "hi"')).toBe('"say"* """hi"""*')
     expect(ftsQuery('   ')).toBeNull()

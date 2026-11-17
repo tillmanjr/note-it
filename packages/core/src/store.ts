@@ -48,6 +48,16 @@ const toNote = (r: NoteRow): NoteMeta => ({
 const NOTE_COLUMNS = `n.id, n.notebook_id, n.title, n.snippet, n.created_at, n.updated_at, n.deleted_at,
   (SELECT group_concat(tag_id) FROM note_tag WHERE note_id = n.id) AS tag_ids`
 
+/** Marks around matched terms in search excerpts. */
+export const HIT_START = ''
+export const HIT_END = ''
+
+export interface SearchHit {
+  note: NoteMeta
+  /** Body excerpt around the match; matched terms are wrapped in HIT_START/HIT_END. */
+  excerpt: string
+}
+
 /** Turns user input into an FTS5 query: every word must match, as a prefix. */
 export function ftsQuery(text: string): string | null {
   const words = text.trim().split(/\s+/).filter(Boolean)
@@ -180,6 +190,32 @@ export class NoteStore {
       params,
     )
     return rows.map(toNote)
+  }
+
+  /** Ranked full-text search over live notes (title matches weigh more), with highlighted excerpts. */
+  async searchNotes(text: string, scope: { notebookId?: Id; tagId?: Id; limit?: number } = {}): Promise<SearchHit[]> {
+    const match = ftsQuery(text)
+    if (!match) return []
+    const where = ['note_fts MATCH ?', 'n.deleted_at IS NULL']
+    const params: unknown[] = [match]
+    if (scope.notebookId) {
+      where.push('n.notebook_id = ?')
+      params.push(scope.notebookId)
+    }
+    if (scope.tagId) {
+      const ids = descendantTagIds(await this.listTags(), scope.tagId)
+      where.push(`EXISTS (SELECT 1 FROM note_tag nt WHERE nt.note_id = n.id AND nt.tag_id IN (${ids.map(() => '?').join(',')}))`)
+      params.push(...ids)
+    }
+    params.push(scope.limit ?? 50)
+    const rows = await this.db.select<NoteRow & { excerpt: string }>(
+      `SELECT ${NOTE_COLUMNS}, snippet(note_fts, 1, char(1), char(2), '…', 14) AS excerpt
+       FROM note_fts JOIN note n ON n.rid = note_fts.rowid
+       WHERE ${where.join(' AND ')}
+       ORDER BY bm25(note_fts, 10.0, 1.0) LIMIT ?`,
+      params,
+    )
+    return rows.map((r) => ({ note: toNote(r), excerpt: r.excerpt ?? '' }))
   }
 
   async getNote(id: Id): Promise<NoteMeta | null> {

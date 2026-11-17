@@ -11,7 +11,7 @@ Status: 2a in progress (2026-11-17). Builds on [`design.md`](design.md) and the 
 | Attachments (server) | Pluggable blob store; disk implementation first (DO Volume + offsite backup), S3/Spaces later via config. |
 | Note body format | **Yjs document per note from day one** (TipTap Collaboration extension), even before sync exists, so 2b adds sync without a data migration. |
 | Local storage | SQLite on device behind a `Store` interface in shared code. Tauri adapter first; Capacitor adapter for mobile later. FTS5 for search. |
-| Layout | Evernote-style three panes: sidebar (notebooks, tag tree, saved filters) → note list → editor. |
+| Layout | Two panes: left pane with collapsible Notebooks / Tags / Notes sections and Trash pinned at the bottom; editor on the right. Search is an overlay (Ctrl+Shift+F). |
 
 ## Order (import early)
 
@@ -61,11 +61,15 @@ spike/editor            frozen reference
 **2a (first cut, 2026-11-17)** — run with `npm install` then `npm run desktop` from the repo root.
 Data lives in `%APPDATA%\com.tdjr.notes` (`notes.db`, `blobs/`).
 
-- Three-pane UI: All notes, notebooks (create/rename/delete), hierarchical tag tree (create,
-  sub-tag, rename, delete, collapse), Trash (restore / delete forever, read-only view).
+- Two-pane UI: left pane with collapsible Notebooks (incl. All notes), Tags (tree: create, sub-tag,
+  rename, delete) and Notes sections (collapse state remembered), Trash pinned at the bottom
+  (restore / delete forever, read-only view).
+- Search overlay (Ctrl+Shift+F): ranked results (title matches weigh more) with highlighted
+  excerpts, optional scope to the current notebook/tag, keyboard navigation. Opening a result
+  doesn't change what the left pane is browsing.
 - Notes: title, notebook, tags (type `a/b/c` to create nested tags), Yjs-backed body with the full
   editor (toolbar + right-click format bar). Opening a note doesn't change "last edited".
-- Search (FTS5, prefix per word, accent-insensitive), sort by edited/created/title.
+- Search is FTS5 (prefix per word, accent-insensitive); notes sort by edited/created/title.
 - Pasted/dropped images stored as content-addressed files, referenced as `attachment:<sha256>`.
 - `npm run dev -w @tdjr/desktop` serves the same UI in a browser (SQLite WASM, localStorage) for
   UI development and automated testing.

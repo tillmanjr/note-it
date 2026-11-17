@@ -1,19 +1,19 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Id, NoteMeta, NoteSort, NoteStore, Notebook, Tag } from '@tdjr/core'
-import { Sidebar, type View } from './Sidebar'
-import { NoteList } from './NoteList'
+import { LeftPane, type View } from './LeftPane'
 import { NoteEditor } from './NoteEditor'
+import { SearchOverlay, type SearchScope } from './SearchOverlay'
 
-// Three-pane layout: sidebar (notebooks, tags, trash) → note list → editor.
+// Two panes: left (notebooks, tags, notes, trash) and the editor. Search is an overlay.
 export function Workspace({ store }: { store: NoteStore }) {
   const [notebooks, setNotebooks] = useState<Notebook[]>([])
   const [tags, setTags] = useState<Tag[]>([])
   const [view, setView] = useState<View>({ kind: 'all' })
-  const [search, setSearch] = useState('')
   const [sort, setSort] = useState<NoteSort>('updated')
   const [notes, setNotes] = useState<NoteMeta[]>([])
-  const [selectedId, setSelectedId] = useState<Id | null>(null)
-  const searchRef = useRef<HTMLInputElement>(null)
+  // The open note is tracked separately from the list: a search result may be outside the current view.
+  const [current, setCurrent] = useState<NoteMeta | null>(null)
+  const [searchOpen, setSearchOpen] = useState(false)
 
   const refreshOrganization = useCallback(async () => {
     const [nbs, ts] = await Promise.all([store.listNotebooks(), store.listTags()])
@@ -26,11 +26,10 @@ export function Workspace({ store }: { store: NoteStore }) {
       notebookId: view.kind === 'notebook' ? view.id : undefined,
       tagId: view.kind === 'tag' ? view.id : undefined,
       trash: view.kind === 'trash',
-      text: search,
       sort,
     })
     setNotes(result)
-  }, [store, view, search, sort])
+  }, [store, view, sort])
 
   useEffect(() => {
     void refreshOrganization()
@@ -40,7 +39,12 @@ export function Workspace({ store }: { store: NoteStore }) {
     void refreshNotes()
   }, [refreshNotes])
 
-  const selected = useMemo(() => notes.find((n) => n.id === selectedId) ?? null, [notes, selectedId])
+  const openNote = useCallback(
+    async (id: Id) => {
+      setCurrent(await store.getNote(id))
+    },
+    [store],
+  )
 
   const newNote = useCallback(async () => {
     const notebookId = view.kind === 'notebook' ? view.id : notebooks[0]?.id
@@ -48,13 +52,11 @@ export function Workspace({ store }: { store: NoteStore }) {
     const note = await store.createNote(notebookId)
     if (view.kind === 'tag') await store.setNoteTags(note.id, [view.id])
     if (view.kind === 'trash') setView({ kind: 'all' })
-    setSearch('')
     await refreshNotes()
-    setNotes((prev) => (prev.some((n) => n.id === note.id) ? prev : [note, ...prev]))
-    setSelectedId(note.id)
-  }, [store, view, notebooks, refreshNotes])
+    await openNote(note.id)
+  }, [store, view, notebooks, refreshNotes, openNote])
 
-  // Keep the list in step with edits without re-querying on every keystroke.
+  // Keep the list and the open note in step with edits without re-querying on every keystroke.
   const patchNote = useCallback(
     (id: Id, patch: Partial<NoteMeta>) => {
       setNotes((prev) => {
@@ -62,14 +64,19 @@ export function Workspace({ store }: { store: NoteStore }) {
         if (sort === 'updated' && patch.updatedAt) next.sort((a, b) => b.updatedAt - a.updatedAt)
         return next
       })
+      setCurrent((cur) => (cur && cur.id === id ? { ...cur, ...patch } : cur))
     },
     [sort],
   )
 
-  const removeFromList = useCallback((id: Id) => {
-    setNotes((prev) => prev.filter((n) => n.id !== id))
-    setSelectedId((cur) => (cur === id ? null : cur))
-  }, [])
+  const closeRemoved = useCallback(
+    (id: Id) => {
+      setNotes((prev) => prev.filter((n) => n.id !== id))
+      setCurrent((cur) => (cur?.id === id ? null : cur))
+      void refreshNotes()
+    },
+    [refreshNotes],
+  )
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -78,58 +85,69 @@ export function Workspace({ store }: { store: NoteStore }) {
         void newNote()
       } else if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'f') {
         e.preventDefault()
-        searchRef.current?.focus()
+        setSearchOpen(true)
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [newNote])
 
+  const title = viewTitle(view, notebooks, tags)
+  const searchScope = useMemo<SearchScope | null>(() => {
+    if (view.kind === 'notebook') return { label: title, notebookId: view.id }
+    if (view.kind === 'tag') return { label: title, tagId: view.id }
+    return null
+  }, [view, title])
+
   return (
     <div className="workspace">
-      <Sidebar
+      <LeftPane
         store={store}
         notebooks={notebooks}
         tags={tags}
         view={view}
-        onView={(v) => {
-          setView(v)
-          setSelectedId(null)
-        }}
+        viewTitle={title}
+        notes={notes}
+        sort={sort}
+        selectedId={current?.id ?? null}
+        onView={setView}
+        onSort={setSort}
+        onSelect={(id) => void openNote(id)}
+        onNew={() => void newNote()}
+        onSearch={() => setSearchOpen(true)}
         onChanged={async () => {
           await refreshOrganization()
           await refreshNotes()
+          if (current) await openNote(current.id)
         }}
       />
-      <NoteList
-        searchRef={searchRef}
-        title={viewTitle(view, notebooks, tags)}
-        notes={notes}
-        notebooks={notebooks}
-        selectedId={selectedId}
-        search={search}
-        sort={sort}
-        canCreate={view.kind !== 'trash'}
-        onSearch={setSearch}
-        onSort={setSort}
-        onSelect={setSelectedId}
-        onNew={() => void newNote()}
-      />
-      {selected ? (
+      {current ? (
         <NoteEditor
-          key={selected.id}
+          key={current.id}
           store={store}
-          note={selected}
+          note={current}
           notebooks={notebooks}
           tags={tags}
-          onPatch={(patch) => patchNote(selected.id, patch)}
+          onPatch={(patch) => patchNote(current.id, patch)}
           onTagsCreated={refreshOrganization}
-          onRemoved={() => removeFromList(selected.id)}
+          onRemoved={() => closeRemoved(current.id)}
         />
       ) : (
         <div className="editor-pane empty">
           {view.kind === 'trash' ? 'Select a note to restore or delete it.' : 'Select a note, or press Ctrl+N for a new one.'}
         </div>
+      )}
+      {searchOpen && (
+        <SearchOverlay
+          store={store}
+          notebooks={notebooks}
+          scope={searchScope}
+          onOpen={(id) => {
+            setSearchOpen(false)
+            void openNote(id)
+          }}
+          onClose={() => setSearchOpen(false)}
+        />
       )}
     </div>
   )
@@ -144,6 +162,6 @@ function viewTitle(view: View, notebooks: Notebook[], tags: Tag[]): string {
     case 'notebook':
       return notebooks.find((n) => n.id === view.id)?.name ?? 'Notebook'
     case 'tag':
-      return `# ${tags.find((t) => t.id === view.id)?.name ?? 'Tag'}`
+      return `#${tags.find((t) => t.id === view.id)?.name ?? 'tag'}`
   }
 }

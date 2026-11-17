@@ -45,8 +45,7 @@ export function Section({
 }) {
   return (
     <section className={`pane-section ${className} ${collapsed ? 'collapsed' : ''}`}>
-      <div className="section-head" onClick={onToggle}>
-        <span className="chevron">{collapsed ? '▸' : '▾'}</span>
+      <div className="section-head" onClick={onToggle} title={collapsed ? 'Expand' : 'Collapse'}>
         <span className="section-title">{title}</span>
         {actions && (
           <span className="section-actions" onClick={(e) => e.stopPropagation()}>

@@ -74,15 +74,20 @@ export function LeftPane({
           onClick={() => onView(v)}
           onDoubleClick={() => setEditing(tag.id)}
         >
-          <button
-            className={`twisty ${node.children.length ? '' : 'leaf'}`}
-            onClick={(e) => {
-              e.stopPropagation()
-              toggle(tag.id)
-            }}
-          >
-            {node.children.length ? (open ? '▾' : '▸') : '•'}
-          </button>
+          {node.children.length ? (
+            <button
+              className="twisty"
+              title={open ? 'Collapse' : 'Expand'}
+              onClick={(e) => {
+                e.stopPropagation()
+                toggle(tag.id)
+              }}
+            >
+              {open ? '▾' : '▸'}
+            </button>
+          ) : (
+            <span className="twisty" />
+          )}
           <InlineEdit
             value={tag.name}
             editing={editing === tag.id}

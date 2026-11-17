@@ -108,20 +108,21 @@
 }
 
 /* Notes inside the left pane */
-.note-list li { padding: 8px 12px; margin: 0 4px; border-radius: 6px; cursor: pointer; }
-.note-list li + li { margin-top: 1px; }
+.note-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-height: 28px;
+  padding: 5px 12px;
+  margin: 0 4px;
+  border-radius: 6px;
+  cursor: pointer;
+}
 .note-list li:hover { background: var(--hover); }
 .note-list li.active { background: var(--active); }
+.note-list .note-title { flex: 1; min-width: 0; font-weight: 500; }
+.note-when { flex: 0 0 auto; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
 .note-title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.note-snippet {
-  color: var(--muted);
-  font-size: 12px;
-  margin: 2px 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
 .note-meta { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 11px; }
 button.primary {
   border: 1px solid var(--accent);

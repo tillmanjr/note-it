@@ -27,16 +27,16 @@ export function NoteList({
   if (notes.length === 0) return <div className="hint">{emptyText}</div>
   return (
     <ul className="note-list">
-      {notes.map((n) => (
-        <li key={n.id} className={n.id === selectedId ? 'active' : ''} onClick={() => onSelect(n.id)}>
-          <div className="note-title">{n.title || 'Untitled'}</div>
-          {n.snippet && <div className="note-snippet">{n.snippet}</div>}
-          <div className="note-meta">
-            <span>{formatWhen(sort === 'created' ? n.createdAt : n.updatedAt)}</span>
-            <span>{nbName.get(n.notebookId) ?? ''}</span>
-          </div>
-        </li>
-      ))}
+      {notes.map((n) => {
+        // One line per note keeps long lists scannable; the snippet and notebook are in the tooltip.
+        const tip = [nbName.get(n.notebookId), n.snippet].filter(Boolean).join(' — ')
+        return (
+          <li key={n.id} className={n.id === selectedId ? 'active' : ''} title={tip} onClick={() => onSelect(n.id)}>
+            <span className="note-title">{n.title || 'Untitled'}</span>
+            <span className="note-when">{formatWhen(sort === 'created' ? n.createdAt : n.updatedAt)}</span>
+          </li>
+        )
+      })}
     </ul>
   )
 }

@@ -70,13 +70,15 @@ export function LeftPane({
       <li key={tag.id}>
         <div
           className={`row ${isActive(v) ? 'active' : ''}`}
-          style={{ paddingLeft: 8 + depth * 14 }}
+          // Names align with notebook rows; each level indents one step. The fold toggle hangs in the margin.
+          style={{ paddingLeft: 12 + depth * 14 }}
           onClick={() => onView(v)}
           onDoubleClick={() => setEditing(tag.id)}
         >
           {node.children.length ? (
             <button
               className="twisty"
+              style={{ left: 1 + depth * 14 }}
               title={open ? 'Collapse' : 'Expand'}
               onClick={(e) => {
                 e.stopPropagation()
@@ -85,9 +87,7 @@ export function LeftPane({
             >
               {open ? '▾' : '▸'}
             </button>
-          ) : (
-            <span className="twisty" />
-          )}
+          ) : null}
           <InlineEdit
             value={tag.name}
             editing={editing === tag.id}

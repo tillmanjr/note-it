@@ -57,6 +57,15 @@
 .section-title { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .section-title .context { text-transform: none; letter-spacing: 0; font-weight: 500; }
 .section-title .selection { text-transform: none; letter-spacing: 0; font-weight: 500; font-size: 10.5px; opacity: 0.75; }
+.left-pane .section-title .clear-selection {
+  min-width: 0 !important;
+  height: 14px !important;
+  padding: 0 1px !important;
+  margin-left: 3px;
+  font-size: 11px;
+  line-height: 1;
+  vertical-align: baseline;
+}
 .section-actions { display: flex; align-items: center; }
 .section-actions select { border: none; background: transparent; color: var(--muted); font-size: 11px; text-transform: none; }
 

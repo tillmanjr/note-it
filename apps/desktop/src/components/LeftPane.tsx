@@ -34,10 +34,28 @@ export function LeftPane({
   // The current notebook / tag, echoed in its section header so it stays visible when collapsed.
   const selectedNotebook = view.kind === 'notebook' ? notebooks.find((n) => n.id === view.id)?.name : undefined
   const selectedTag = view.kind === 'tag' ? tagPath(tags, view.id) : undefined
+  const clearSelection = () => onView({ kind: 'all' })
+  // Clicking the selected notebook/tag again unselects it.
+  const select = (v: View) => (isActive(v) ? clearSelection() : onView(v))
   const withSelection = (label: string, selection?: string) => (
     <>
       {label}
-      {selection && <span className="selection"> ({selection})</span>}
+      {selection && (
+        <span className="selection">
+          {' '}({selection}
+          <button
+            className="clear-selection"
+            title="Clear selection"
+            onClick={(e) => {
+              e.stopPropagation()
+              clearSelection()
+            }}
+          >
+            ×
+          </button>
+          )
+        </span>
+      )}
     </>
   )
   const tree = useMemo(() => buildTagTree(tags), [tags])
@@ -81,7 +99,7 @@ export function LeftPane({
           className={`row ${isActive(v) ? 'active' : ''}`}
           // Names align with notebook rows; each level indents one step. The fold toggle hangs in the margin.
           style={{ paddingLeft: 12 + depth * 14 }}
-          onClick={() => onView(v)}
+          onClick={() => select(v)}
           onDoubleClick={() => setEditing(tag.id)}
         >
           {node.children.length ? (
@@ -154,7 +172,7 @@ export function LeftPane({
               const v: View = { kind: 'notebook', id: nb.id }
               return (
                 <li key={nb.id}>
-                  <div className={`row ${isActive(v) ? 'active' : ''}`} onClick={() => onView(v)} onDoubleClick={() => setEditing(nb.id)}>
+                  <div className={`row ${isActive(v) ? 'active' : ''}`} onClick={() => select(v)} onDoubleClick={() => setEditing(nb.id)}>
                     <InlineEdit
                       value={nb.name}
                       editing={editing === nb.id}

@@ -224,3 +224,48 @@ button.primary {
 .editor-pane .toolbar { margin: 6px 20px 0; position: static; }
 .note-body { flex: 1; overflow-y: auto; padding: 12px 28px 40vh; cursor: text; }
 .note-body .tiptap { min-height: 100%; }
+
+/* ---------- Depth ---------- */
+/* The editor is a raised sheet of paper beside the left pane. */
+.workspace { background: var(--sidebar); }
+.left-pane { border-right: none; }
+.editor-pane {
+  margin: 8px 8px 8px 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+.editor-pane.empty { background: var(--paper); }
+.note-header { border-bottom: 1px solid var(--border); box-shadow: 0 1px 0 var(--highlight); padding-bottom: 10px; }
+
+/* Raised controls: gradient face, faint top highlight, soft shadow; pressed state sinks. */
+.search-button,
+.note-props select,
+.note-props button,
+.trash-bar button {
+  background: var(--raised);
+  box-shadow: inset 0 1px 0 var(--highlight), var(--shadow-xs);
+}
+button.primary {
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--accent) 88%, white), var(--accent));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), var(--shadow-sm);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.15);
+}
+button.primary:active:not(:disabled),
+.search-button:active,
+.note-props button:active,
+.trash-bar button:active {
+  transform: translateY(1px);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Selected rows lift slightly off the pane. */
+.left-pane .row.active,
+.note-list li.active {
+  box-shadow: inset 0 1px 0 var(--highlight), var(--shadow-xs);
+}
+.tag-chip { box-shadow: inset 0 1px 0 var(--highlight), var(--shadow-xs); }
+.pane-bottom { box-shadow: 0 -1px 0 var(--highlight); }
+.search-panel { box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35), 0 2px 6px rgba(0, 0, 0, 0.2); }
+.search-results li.active { box-shadow: inset 0 1px 0 var(--highlight), var(--shadow-xs); }

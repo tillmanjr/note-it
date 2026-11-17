@@ -130,3 +130,29 @@ ul[data-type='taskList'] ul[data-type='taskList'] { padding-left: 1.4em; }
 .format-bar .swatch.none { background: linear-gradient(135deg, transparent 45%, #c0392b 45%, #c0392b 55%, transparent 55%); }
 .format-bar .sep { width: 1px; align-self: stretch; margin: 2px 4px; background: var(--border); }
 .tiptap p[data-monospace] { font-size: 0.93em; }
+
+/* ---------- Depth (uses host tokens; falls back to flat when they're absent) ---------- */
+.toolbar {
+  background: var(--raised, var(--panel));
+  box-shadow: inset 0 1px 0 var(--highlight, transparent), var(--shadow-sm, none);
+}
+.toolbar button.active,
+.format-bar button.active {
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.18);
+}
+.toolbar button:active,
+.format-bar button:active {
+  transform: translateY(1px);
+}
+.toolbar select,
+.format-bar select {
+  box-shadow: inset 0 1px 0 var(--highlight, transparent), var(--shadow-xs, none);
+}
+.toolbar .swatch,
+.format-bar .swatch {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), var(--shadow-xs, none);
+}
+.format-bar {
+  background: var(--raised, var(--paper));
+  box-shadow: inset 0 1px 0 var(--highlight, transparent), 0 6px 20px rgba(0, 0, 0, 0.28);
+}

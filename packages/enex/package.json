@@ -1,0 +1,27 @@
+{
+  "name": "@tdjr/enex",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p .",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "jsdom": "^29.1.1",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
+  },
+  "dependencies": {
+    "@noble/hashes": "^2.4.0",
+    "@tdjr/core": "*",
+    "@tdjr/editor": "*",
+    "@tiptap/core": "^3.34.0",
+    "@tiptap/y-tiptap": "^3.3.0",
+    "yjs": "^13.6.33"
+  }
+}

@@ -8,7 +8,7 @@ sync, storage or mobile. Code: `spike/editor` (`npm install && npm run dev`).
 - **Schema** (`src/editorExtensions.ts`): StarterKit (headings, lists, bold/italic/underline/strike,
   code, links, rules, undo), nested task lists, tables (resizable), images, text style (font family,
   size, color, background), multicolor highlight, alignment, and two custom extensions.
-- **Real indentation** (`src/extensions/indent.ts`): numeric `indent` attribute (0–10) on paragraphs,
+- **Real indentation** (`src/extensions/indent.ts`): numeric `indent` attribute (0–12) on paragraphs,
   headings and code blocks (so converting between them keeps the indent), rendered as `margin-left` + `data-indent`. Tab / Shift-Tab indent and outdent;
   Backspace at the start of an indented block outdents. In lists Tab nests items; in tables Tab
   moves between cells. Pasted `margin-left` / `padding-left` (px, pt, em) is converted to levels at 40px each,

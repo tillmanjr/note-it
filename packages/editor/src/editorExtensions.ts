@@ -9,6 +9,7 @@ import Collaboration from '@tiptap/extension-collaboration'
 import type { Doc } from 'yjs'
 import { AttachmentImage } from './extensions/attachmentImage'
 import { CanonicalBackgroundColor, CanonicalColor } from './extensions/colors'
+import { EvernoteEncrypted } from './extensions/evernoteEncrypted'
 import { Indent } from './extensions/indent'
 import { Monospace } from './extensions/monospace'
 import { Paste, type PasteOptions } from './extensions/paste'
@@ -43,6 +44,7 @@ export function noteExtensions({ paste = {}, ydoc, resolveImageSrc }: NoteExtens
     TextAlign.configure({ types: ['heading', 'paragraph'] }),
     Indent,
     Monospace,
+    EvernoteEncrypted,
     Paste.configure(paste),
     ...(ydoc ? [Collaboration.configure({ document: ydoc, field: NOTE_BODY_FIELD })] : []),
   ]

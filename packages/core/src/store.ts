@@ -302,6 +302,57 @@ export class NoteStore {
     await this.db.execute('UPDATE note_fts SET body = ? WHERE rowid = (SELECT rid FROM note WHERE id = ?)', [text, id])
   }
 
+  // ---------- Import ----------
+
+  /** Live notebook with this name (case-insensitive), or a new one. */
+  async findOrCreateNotebook(name: string): Promise<Notebook> {
+    const existing = (await this.listNotebooks()).find((n) => n.name.localeCompare(name, undefined, { sensitivity: 'base' }) === 0)
+    return existing ?? this.createNotebook(name)
+  }
+
+  /** Live tag with this name under `parentId` (case-insensitive), or a new one. */
+  async findOrCreateTag(name: string, parentId: Id | null = null): Promise<Tag> {
+    const existing = (await this.listTags()).find(
+      (t) => t.parentId === parentId && t.name.localeCompare(name, undefined, { sensitivity: 'base' }) === 0,
+    )
+    return existing ?? this.createTag(name, parentId)
+  }
+
+  /** A live note in the notebook with the same title and creation time (re-import detection). */
+  async findImportedNote(notebookId: Id, title: string, createdAt: number): Promise<Id | null> {
+    const rows = await this.db.select<{ id: string }>(
+      'SELECT id FROM note WHERE notebook_id = ? AND title = ? AND created_at = ? AND deleted_at IS NULL LIMIT 1',
+      [notebookId, title, createdAt],
+    )
+    return rows[0]?.id ?? null
+  }
+
+  /** Inserts a complete note (original timestamps, tags, Yjs body, plain text) in one go. */
+  async importNote(input: {
+    notebookId: Id
+    title: string
+    createdAt: number
+    updatedAt: number
+    tagIds: Id[]
+    body: Uint8Array
+    text: string
+  }): Promise<Id> {
+    const id = ulid(input.createdAt)
+    const snippet = input.text.replace(/\s+/g, ' ').trim().slice(0, SNIPPET_LENGTH)
+    await this.db.execute(
+      'INSERT INTO note (id, notebook_id, title, snippet, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
+      [id, input.notebookId, input.title, snippet, input.createdAt, input.updatedAt],
+    )
+    await this.db.execute('INSERT INTO note_fts (rowid, title, body) VALUES ((SELECT rid FROM note WHERE id = ?), ?, ?)', [
+      id, input.title, input.text,
+    ])
+    for (const tagId of new Set(input.tagIds)) {
+      await this.db.execute('INSERT INTO note_tag (note_id, tag_id) VALUES (?, ?)', [id, tagId])
+    }
+    await this.db.execute('INSERT INTO note_update (note_id, data) VALUES (?, ?)', [id, toBase64(input.body)])
+    return id
+  }
+
   // ---------- Attachments ----------
 
   async putAttachment(bytes: Uint8Array, mime: string, filename: string): Promise<Attachment> {

@@ -179,6 +179,30 @@ describe('Yjs note bodies', () => {
   })
 })
 
+describe('import', () => {
+  it('stores complete notes with original timestamps and detects re-imports', async () => {
+    const nb = await store.findOrCreateNotebook('Recipes')
+    expect((await store.findOrCreateNotebook('recipes')).id).toBe(nb.id)
+    const tag = await store.findOrCreateTag('Dinner')
+    expect((await store.findOrCreateTag('dinner')).id).toBe(tag.id)
+    const doc = new Y.Doc()
+    doc.getText('t').insert(0, 'body')
+    const id = await store.importNote({
+      notebookId: nb.id, title: 'Soup', createdAt: 1_250_000_000_000, updatedAt: 1_260_000_000_000,
+      tagIds: [tag.id], body: Y.encodeStateAsUpdate(doc), text: 'Simmer the onions slowly',
+    })
+    const note = await store.getNote(id)
+    expect(note).toMatchObject({ title: 'Soup', createdAt: 1_250_000_000_000, updatedAt: 1_260_000_000_000, tagIds: [tag.id] })
+    expect(note?.snippet).toBe('Simmer the onions slowly')
+    expect((await store.queryNotes({ text: 'onion' })).map((n) => n.id)).toEqual([id])
+    expect(await store.findImportedNote(nb.id, 'Soup', 1_250_000_000_000)).toBe(id)
+    expect(await store.findImportedNote(nb.id, 'Soup', 1)).toBeNull()
+    const loaded = new Y.Doc()
+    Y.applyUpdate(loaded, (await store.loadNoteBody(id))!)
+    expect(loaded.getText('t').toString()).toBe('body')
+  })
+})
+
 describe('attachments', () => {
   it('stores identical content once, keyed by SHA-256', async () => {
     const bytes = new TextEncoder().encode('hello')

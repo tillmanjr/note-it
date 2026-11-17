@@ -156,3 +156,16 @@ ul[data-type='taskList'] ul[data-type='taskList'] { padding-left: 1.4em; }
   background: var(--raised, var(--paper));
   box-shadow: inset 0 1px 0 var(--highlight, transparent), 0 6px 20px rgba(0, 0, 0, 0.28);
 }
+
+/* Locked Evernote-encrypted block (unlockable once the vault exists). */
+.tiptap .evernote-encrypted {
+  display: inline-block;
+  padding: 4px 10px;
+  margin: 2px 0;
+  border: 1px dashed var(--border, #999);
+  border-radius: 6px;
+  color: var(--muted, #777);
+  font-size: 0.92em;
+  user-select: none;
+}
+.tiptap .evernote-encrypted.ProseMirror-selectednode { outline: 2px solid var(--accent, #2370b8); }

@@ -20,13 +20,14 @@ interface Props {
   onSelect: (id: Id) => void
   onNew: () => void
   onSearch: () => void
+  onImport: () => void
   onChanged: () => Promise<void>
 }
 
 // Single left pane: actions, then collapsible Notebooks / Tags / Notes sections, Trash pinned at the bottom.
 export function LeftPane({
   store, notebooks, tags, view, viewTitle, notes, sort, selectedId,
-  onView, onSort, onSelect, onNew, onSearch, onChanged,
+  onView, onSort, onSelect, onNew, onSearch, onImport, onChanged,
 }: Props) {
   const [editing, setEditing] = useState<Id | null>(null)
   const [collapsed, setCollapsed] = useState<Set<Id>>(new Set())
@@ -160,7 +161,12 @@ export function LeftPane({
           title={withSelection('Notebooks', selectedNotebook)}
           collapsed={sections.isCollapsed('notebooks')}
           onToggle={() => sections.toggle('notebooks')}
-          actions={<button title="New notebook" onClick={() => void addNotebook()}>＋</button>}
+          actions={
+            <>
+              <button title="Import from Evernote (.enex)" onClick={onImport}>⤓</button>
+              <button title="New notebook" onClick={() => void addNotebook()}>＋</button>
+            </>
+          }
         >
           <ul>
             <li>

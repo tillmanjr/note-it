@@ -61,7 +61,7 @@ export const Indent = Extension.create<IndentOptions>({
   priority: 25,
 
   addOptions() {
-    return { types: ['paragraph', 'heading', 'codeBlock'], maxLevel: 10, stepPx: 40 }
+    return { types: ['paragraph', 'heading', 'codeBlock'], maxLevel: 12, stepPx: 40 }
   },
 
   addGlobalAttributes() {

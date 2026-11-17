@@ -1,6 +1,6 @@
 # Milestone 2 — Desktop + server MVP
 
-Status: 2a in progress (2026-11-17). Builds on [`design.md`](design.md) and the [editor spike](editor-spike.md).
+Status: 2a done, 2b (Evernote import) done (2026-11-17). Builds on [`design.md`](design.md) and the [editor spike](editor-spike.md).
 
 ## Decisions
 
@@ -76,3 +76,31 @@ Data lives in `%APPDATA%\com.tdjr.notes` (`notes.db`, `blobs/`).
 
 Not yet: non-image attachments (PDF/files), downloading remote images on paste, dragging tags to
 re-parent, drag notes between notebooks, saved searches, note history.
+
+**2b — Evernote import (2026-11-17).** Notebooks header → ⤓ opens the import dialog: choose `.enex`
+files, adjust the target notebook per file (an existing notebook with the same name is reused),
+import with progress, then a per-notebook report. Code: `packages/enex`.
+
+Decisions:
+- Tags stay flat (Evernote exports flat names); matched to existing top-level tags case-insensitively.
+- Evernote-encrypted text is kept as a locked block with the original ciphertext (no decryption on
+  import); it becomes unlockable/re-encryptable with the vault in 2d. Excluded from search.
+- Original created/updated dates are kept. Re-importing skips notes with the same notebook, title and
+  creation time.
+
+ENML mapping:
+- Borderless left-margin `<blockquote>` (Evernote's indent, nested per level) → indent levels (max 12).
+- `<div>` → paragraphs (`<div><br/></div>` → empty paragraph); `<font>` → text styles; paragraphs
+  entirely in a fixed-width font → Monospaced.
+- Checklists: legacy `<en-todo>` and current `--en-todo`/`--en-checked` styles → task lists.
+- `<en-media>` → stored attachments (matched by MD5); images inline, other files as 📎 links.
+  1×1 spacer images are dropped; media missing from the export leaves a visible ⚠ marker and a
+  report warning. Remote `<img>` URLs from web clips are kept as links (not downloaded).
+- Tables (incl. merged cells), lists, headings, links and inline formatting go through the same
+  cleanup as pasted HTML.
+
+Verified against three real exports (105 notes): all imported with no text loss
+(`ENEX_DIR=… npx vitest run real-exports` in `packages/enex`; the test is git-ignored and prints counts
+only). One Evernote export omitted an image it references; the importer reports it.
+
+Not yet: non-image attachments open/preview in the app, downloading remote web-clip images.

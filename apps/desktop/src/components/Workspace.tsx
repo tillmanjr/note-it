@@ -3,6 +3,7 @@ import type { Id, NoteMeta, NoteSort, NoteStore, Notebook, Tag } from '@tdjr/cor
 import { LeftPane, type View } from './LeftPane'
 import { NoteEditor } from './NoteEditor'
 import { SearchOverlay, type SearchScope } from './SearchOverlay'
+import { ImportDialog } from './ImportDialog'
 
 // Two panes: left (notebooks, tags, notes, trash) and the editor. Search is an overlay.
 export function Workspace({ store }: { store: NoteStore }) {
@@ -14,6 +15,7 @@ export function Workspace({ store }: { store: NoteStore }) {
   // The open note is tracked separately from the list: a search result may be outside the current view.
   const [current, setCurrent] = useState<NoteMeta | null>(null)
   const [searchOpen, setSearchOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
 
   const refreshOrganization = useCallback(async () => {
     const [nbs, ts] = await Promise.all([store.listNotebooks(), store.listTags()])
@@ -115,6 +117,7 @@ export function Workspace({ store }: { store: NoteStore }) {
         onSelect={(id) => void openNote(id)}
         onNew={() => void newNote()}
         onSearch={() => setSearchOpen(true)}
+        onImport={() => setImportOpen(true)}
         onChanged={async () => {
           await refreshOrganization()
           await refreshNotes()
@@ -136,6 +139,18 @@ export function Workspace({ store }: { store: NoteStore }) {
         <div className="editor-pane empty">
           {view.kind === 'trash' ? 'Select a note to restore or delete it.' : 'Select a note, or press Ctrl+N for a new one.'}
         </div>
+      )}
+      {importOpen && (
+        <ImportDialog
+          store={store}
+          notebooks={notebooks}
+          onClose={async (notebookId) => {
+            setImportOpen(false)
+            await refreshOrganization()
+            if (notebookId) setView({ kind: 'notebook', id: notebookId })
+            else await refreshNotes()
+          }}
+        />
       )}
       {searchOpen && (
         <SearchOverlay

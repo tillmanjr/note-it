@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useEditorState, type Editor } from '@tiptap/react'
 import { BubbleMenu } from '@tiptap/react/menus'
 import { BlockStyleSelect } from './BlockStyleSelect'
-import { COLORS, HIGHLIGHTS } from './formatting'
+import { COLORS, HIGHLIGHTS, colorLabel } from './formatting'
 
 const PLUGIN_KEY = 'selectionFormatBar'
 
@@ -105,7 +105,7 @@ export function SelectionFormatBar({ editor }: { editor: Editor }) {
       </button>
       <span className="sep" />
       {COLORS.map((col) => (
-        <button key={col} className={`swatch${s.color === col ? ' active' : ''}`} style={{ background: col }} title={`Text ${col}`}
+        <button key={col} className={`swatch${s.color === col ? ' active' : ''}`} style={{ background: col }} title={colorLabel(col)}
           onMouseDown={keepSelection} onClick={() => c().setColor(col).run()} />
       ))}
       <button className="swatch none" title="Default text color" onMouseDown={keepSelection} onClick={() => c().unsetColor().run()} />

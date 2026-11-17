@@ -1,6 +1,6 @@
 import { useEditorState, type Editor } from '@tiptap/react'
 import { BlockStyleSelect } from './BlockStyleSelect'
-import { COLORS, FONTS, HIGHLIGHTS, SIZES } from './formatting'
+import { COLORS, FONTS, HIGHLIGHTS, SIZES, colorLabel } from './formatting'
 
 // Main formatting toolbar.
 export function Toolbar({ editor }: { editor: Editor }) {
@@ -65,7 +65,7 @@ export function Toolbar({ editor }: { editor: Editor }) {
       </div>
       <div className="group swatches">
         {COLORS.map((col) => (
-          <button key={col} className="swatch" style={{ background: col }} title={`Text ${col}`}
+          <button key={col} className="swatch" style={{ background: col }} title={colorLabel(col)}
             onMouseDown={(ev) => ev.preventDefault()} onClick={() => c().setColor(col).run()} />
         ))}
         {HIGHLIGHTS.map((col) => (

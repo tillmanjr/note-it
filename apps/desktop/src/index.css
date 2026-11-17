@@ -10,6 +10,9 @@
   --muted: #7a7a7a;
   --accent: #2370b8;
   --danger: #c0392b;
+  /* Theme-aware note text colors: maximum / minimum contrast against the page. */
+  --note-max: #000000;
+  --note-min: #ffffff;
   /* Depth: soft shadows plus a faint top highlight on raised surfaces. */
   --highlight: rgba(255, 255, 255, 0.7);
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.08);
@@ -36,6 +39,8 @@
     --muted: #9a9a9a;
     --accent: #6aaef0;
     --danger: #e0645a;
+    --note-max: #ffffff;
+    --note-min: #000000;
     --highlight: rgba(255, 255, 255, 0.05);
     --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.35);
     --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.45), 0 1px 2px rgba(0, 0, 0, 0.3);

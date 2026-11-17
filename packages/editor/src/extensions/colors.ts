@@ -1,5 +1,6 @@
 import { getStyleProperty, isValidCSSStyleValue } from '@tiptap/core'
 import { BackgroundColor, Color } from '@tiptap/extension-text-style'
+import { CONTRAST_MAX, CONTRAST_MIN } from '../formatting'
 
 // ProseMirror serializes `style` via dom.style.cssText, so the browser rewrites
 // `#c0392b` to `rgb(192, 57, 43)` on the way out. Storing every color as
@@ -9,6 +10,9 @@ export function toHexColor(value: string | null | undefined): string | null {
   if (!value) return null
   const v = value.replace(/['"]+/g, '').trim().toLowerCase()
   if (v === 'transparent' || v === 'inherit' || v === 'initial') return null
+  // Theme-aware contrast colors keep one canonical spelling whatever the browser serializes.
+  const contrast = v.match(/^var\(\s*--note-(max|min)\b/)
+  if (contrast) return contrast[1] === 'max' ? CONTRAST_MAX : CONTRAST_MIN
   const short = v.match(/^#([0-9a-f])([0-9a-f])([0-9a-f])$/)
   if (short) return `#${short[1]}${short[1]}${short[2]}${short[2]}${short[3]}${short[3]}`
   if (/^#[0-9a-f]{6}$/.test(v)) return v

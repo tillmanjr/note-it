@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { buildTagTree, type Id, type NoteMeta, type NoteSort, type NoteStore, type Notebook, type Tag, type TagNode } from '@tdjr/core'
+import { buildTagTree, tagPath, type Id, type NoteMeta, type NoteSort, type NoteStore, type Notebook, type Tag, type TagNode } from '@tdjr/core'
 import { ConfirmButton, InlineEdit } from './controls'
 import { NoteList } from './NoteList'
 import { Section, useCollapsedSections } from './Section'
@@ -31,6 +31,15 @@ export function LeftPane({
   const [editing, setEditing] = useState<Id | null>(null)
   const [collapsed, setCollapsed] = useState<Set<Id>>(new Set())
   const sections = useCollapsedSections()
+  // The current notebook / tag, echoed in its section header so it stays visible when collapsed.
+  const selectedNotebook = view.kind === 'notebook' ? notebooks.find((n) => n.id === view.id)?.name : undefined
+  const selectedTag = view.kind === 'tag' ? tagPath(tags, view.id) : undefined
+  const withSelection = (label: string, selection?: string) => (
+    <>
+      {label}
+      {selection && <span className="selection"> ({selection})</span>}
+    </>
+  )
   const tree = useMemo(() => buildTagTree(tags), [tags])
 
   const isActive = (v: View) =>
@@ -130,7 +139,7 @@ export function LeftPane({
       <div className="pane-sections">
         <Section
           className="notebooks"
-          title="Notebooks"
+          title={withSelection('Notebooks', selectedNotebook)}
           collapsed={sections.isCollapsed('notebooks')}
           onToggle={() => sections.toggle('notebooks')}
           actions={<button title="New notebook" onClick={() => void addNotebook()}>＋</button>}
@@ -178,7 +187,7 @@ export function LeftPane({
 
         <Section
           className="tags"
-          title="Tags"
+          title={withSelection('Tags', selectedTag)}
           collapsed={sections.isCollapsed('tags')}
           onToggle={() => sections.toggle('tags')}
           actions={<button title="New tag" onClick={() => void addTag(null)}>＋</button>}

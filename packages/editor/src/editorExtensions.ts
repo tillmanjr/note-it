@@ -2,12 +2,12 @@ import type { Extensions } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
 import { TaskItem, TaskList } from '@tiptap/extension-list'
 import { TableKit } from '@tiptap/extension-table'
-import Image from '@tiptap/extension-image'
 import { TextStyleKit } from '@tiptap/extension-text-style'
 import TextAlign from '@tiptap/extension-text-align'
 import Highlight from '@tiptap/extension-highlight'
 import Collaboration from '@tiptap/extension-collaboration'
 import type { Doc } from 'yjs'
+import { AttachmentImage } from './extensions/attachmentImage'
 import { CanonicalBackgroundColor, CanonicalColor } from './extensions/colors'
 import { Indent } from './extensions/indent'
 import { Monospace } from './extensions/monospace'
@@ -20,10 +20,12 @@ export interface NoteExtensionOptions {
   paste?: PasteOptions
   /** When set, the body lives in this Y.Doc (undo/redo come from Yjs). */
   ydoc?: Doc
+  /** Maps an image `src` (e.g. `attachment:<hash>`) to a URL the webview can load. */
+  resolveImageSrc?: (src: string) => string
 }
 
 // The note schema. Shared by the live editor and headless conversions (import/export, round-trip checks).
-export function noteExtensions({ paste = {}, ydoc }: NoteExtensionOptions = {}): Extensions {
+export function noteExtensions({ paste = {}, ydoc, resolveImageSrc }: NoteExtensionOptions = {}): Extensions {
   return [
     StarterKit.configure({
       link: { openOnClick: false, autolink: true, defaultProtocol: 'https' },
@@ -33,7 +35,7 @@ export function noteExtensions({ paste = {}, ydoc }: NoteExtensionOptions = {}):
     TaskList,
     TaskItem.configure({ nested: true }),
     TableKit.configure({ table: { resizable: true } }),
-    Image.configure({ allowBase64: true }),
+    AttachmentImage.configure({ allowBase64: true, ...(resolveImageSrc ? { resolveSrc: resolveImageSrc } : {}) }),
     TextStyleKit.configure({ color: false, backgroundColor: false }),
     CanonicalColor,
     CanonicalBackgroundColor,

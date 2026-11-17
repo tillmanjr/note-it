@@ -8,6 +8,8 @@ import { Plugin, PluginKey } from '@tiptap/pm/state'
 export interface PasteOptions {
   /** Called with the raw clipboard HTML, for inspecting what sources actually send. */
   onRawHtml?: (html: string) => void
+  /** Stores pasted/dropped image files and returns the `src` for each. Default: inline data URLs. */
+  storeImages?: (files: File[]) => Promise<string[]>
 }
 
 export function cleanPastedHtml(html: string): string {
@@ -66,18 +68,18 @@ export const Paste = Extension.create<PasteOptions>({
   name: 'pasteFidelity',
 
   addOptions() {
-    return { onRawHtml: undefined }
+    return { onRawHtml: undefined, storeImages: undefined }
   },
 
   addProseMirrorPlugins() {
     const { onRawHtml } = this.options
+    const storeImages = this.options.storeImages ?? ((files: File[]) => Promise.all(files.map(readAsDataUrl)))
     const editor = this.editor
 
     const insertImageFiles = (files: File[], pos?: number) => {
       const images = files.filter((f) => f.type.startsWith('image/'))
       if (images.length === 0) return false
-      // Spike: embed as data URLs. The real app stores these as content-addressed attachment blobs.
-      void Promise.all(images.map(readAsDataUrl)).then((srcs) => {
+      void storeImages(images).then((srcs) => {
         const chain = editor.chain().focus()
         if (pos !== undefined) chain.setTextSelection(pos)
         chain.insertContent(srcs.map((src) => ({ type: 'image', attrs: { src } }))).run()

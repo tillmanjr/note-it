@@ -56,11 +56,15 @@ export function ftsQuery(text: string): string | null {
 }
 
 export class NoteStore {
-  constructor(
-    private readonly db: SqlDriver,
-    private readonly blobs: BlobStore,
-    private readonly now: () => number = Date.now,
-  ) {}
+  private readonly db: SqlDriver
+  private readonly blobs: BlobStore
+  private readonly now: () => number
+
+  constructor(db: SqlDriver, blobs: BlobStore, now: () => number = Date.now) {
+    this.db = db
+    this.blobs = blobs
+    this.now = now
+  }
 
   async migrate(): Promise<void> {
     await this.db.execute('CREATE TABLE IF NOT EXISTS schema_version (version INTEGER NOT NULL)')
@@ -249,9 +253,10 @@ export class NoteStore {
     return merged
   }
 
-  async appendNoteUpdate(id: Id, update: Uint8Array): Promise<void> {
+  /** `touch`: whether this counts as an edit for "last edited" (false for editor bookkeeping updates). */
+  async appendNoteUpdate(id: Id, update: Uint8Array, touch = true): Promise<void> {
     await this.db.execute('INSERT INTO note_update (note_id, data) VALUES (?, ?)', [id, toBase64(update)])
-    await this.db.execute('UPDATE note SET updated_at = ? WHERE id = ?', [this.now(), id])
+    if (touch) await this.db.execute('UPDATE note SET updated_at = ? WHERE id = ?', [this.now(), id])
   }
 
   /** Updates the search index and list snippet from the body's plain text. */

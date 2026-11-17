@@ -1,6 +1,6 @@
 # Milestone 2 — Desktop + server MVP
 
-Status: planning, 2026-11-16. Builds on [`design.md`](design.md) and the [editor spike](editor-spike.md).
+Status: 2a in progress (2026-11-17). Builds on [`design.md`](design.md) and the [editor spike](editor-spike.md).
 
 ## Decisions
 
@@ -55,3 +55,20 @@ spike/editor            frozen reference
 - Create, organize, find and edit notes entirely offline in the Tauri app, with everything the spike can do.
 - Data survives restarts; search over a few thousand notes returns in < 100 ms.
 - Pasted and dropped images are stored as local attachment files, not data URLs.
+
+## Progress
+
+**2a (first cut, 2026-11-17)** — run with `npm install` then `npm run desktop` from the repo root.
+Data lives in `%APPDATA%\com.tdjr.notes` (`notes.db`, `blobs/`).
+
+- Three-pane UI: All notes, notebooks (create/rename/delete), hierarchical tag tree (create,
+  sub-tag, rename, delete, collapse), Trash (restore / delete forever, read-only view).
+- Notes: title, notebook, tags (type `a/b/c` to create nested tags), Yjs-backed body with the full
+  editor (toolbar + right-click format bar). Opening a note doesn't change "last edited".
+- Search (FTS5, prefix per word, accent-insensitive), sort by edited/created/title.
+- Pasted/dropped images stored as content-addressed files, referenced as `attachment:<sha256>`.
+- `npm run dev -w @tdjr/desktop` serves the same UI in a browser (SQLite WASM, localStorage) for
+  UI development and automated testing.
+
+Not yet: non-image attachments (PDF/files), downloading remote images on paste, dragging tags to
+re-parent, drag notes between notebooks, saved searches, note history.

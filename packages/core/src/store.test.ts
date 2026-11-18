@@ -70,6 +70,21 @@ describe('notebooks and notes', () => {
     expect(await store.getNote(n.id)).toBeNull()
   })
 
+  it('empties the trash, keeping live notes', async () => {
+    const nb = await store.createNotebook('Work')
+    const tag = await store.createTag('t')
+    const keep = await store.createNote(nb.id, 'Keep')
+    const a = await store.createNote(nb.id, 'Old a')
+    const b = await store.createNote(nb.id, 'Old b')
+    await store.setNoteTags(a.id, [tag.id])
+    await store.trashNote(a.id)
+    await store.trashNote(b.id)
+    expect(await store.emptyTrash()).toBe(2)
+    expect(await store.queryNotes({ trash: true })).toHaveLength(0)
+    expect((await store.queryNotes()).map((n) => n.id)).toEqual([keep.id])
+    expect(await store.emptyTrash()).toBe(0)
+  })
+
   it('deleting a notebook trashes its notes; restore falls back to another notebook', async () => {
     const a = await store.createNotebook('A')
     const b = await store.createNotebook('B')

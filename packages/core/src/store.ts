@@ -274,6 +274,17 @@ export class NoteStore {
     await this.db.execute('DELETE FROM note WHERE id = ?', [id])
   }
 
+  /** Permanently deletes every trashed note and its history. Returns how many were deleted. */
+  async emptyTrash(): Promise<number> {
+    const trashed = 'SELECT id FROM note WHERE deleted_at IS NOT NULL'
+    const [{ count }] = await this.db.select<{ count: number }>(`SELECT COUNT(*) AS count FROM (${trashed})`)
+    await this.db.execute('DELETE FROM note_fts WHERE rowid IN (SELECT rid FROM note WHERE deleted_at IS NOT NULL)')
+    await this.db.execute(`DELETE FROM note_update WHERE note_id IN (${trashed})`)
+    await this.db.execute(`DELETE FROM note_tag WHERE note_id IN (${trashed})`)
+    await this.db.execute('DELETE FROM note WHERE deleted_at IS NOT NULL')
+    return count
+  }
+
   // ---------- Note bodies (Yjs) ----------
 
   /** The note body as a single Yjs update (merged from the stored log), or null if it has none yet. */

@@ -250,6 +250,14 @@ export function LeftPane({
 
       <div className={`row pane-bottom ${isActive({ kind: 'trash' }) ? 'active' : ''}`} onClick={() => onView({ kind: 'trash' })}>
         <span className="label">🗑 Trash</span>
+        <span className="row-actions">
+          <ConfirmButton
+            label="Empty"
+            confirmLabel="Empty Trash?"
+            title="Permanently delete every note in the Trash"
+            onConfirm={() => void run(() => store.emptyTrash())}
+          />
+        </span>
       </div>
     </nav>
   )

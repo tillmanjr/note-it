@@ -43,14 +43,19 @@ export function Section({
 }: {
   title: ReactNode
   collapsed: boolean
-  onToggle: () => void
+  /** Omitted for a section that can't collapse. */
+  onToggle?: () => void
   actions?: ReactNode
   className?: string
   children: ReactNode
 }) {
   return (
     <section className={`pane-section ${className} ${collapsed ? 'collapsed' : ''}`}>
-      <div className="section-head" onClick={onToggle} title={collapsed ? 'Expand' : 'Collapse'}>
+      <div
+        className={`section-head${onToggle ? '' : ' fixed'}`}
+        onClick={onToggle}
+        title={onToggle ? (collapsed ? 'Expand' : 'Collapse') : undefined}
+      >
         <span className="section-title">{title}</span>
         {actions && (
           <span className="section-actions" onClick={(e) => e.stopPropagation()}>

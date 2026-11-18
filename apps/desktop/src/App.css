@@ -39,7 +39,8 @@
 .pane-section { display: flex; flex-direction: column; min-height: 0; flex: 0 0 auto; }
 .pane-section.notebooks:not(.collapsed), .pane-section.tags:not(.collapsed) { flex: 0 1 auto; max-height: 30%; }
 .pane-section.notes:not(.collapsed) { flex: 1 1 0; }
-.pane-sections:has(.notes.collapsed) .pane-section { max-height: none; }
+.pane-sections:has(.notes.collapsed) .pane-section,
+.pane-sections:not(:has(.notes)) .pane-section { max-height: none; }
 .section-body { overflow-y: auto; min-height: 0; padding: 4px 0; }
 .section-head {
   display: flex;
@@ -394,3 +395,25 @@ button.primary.danger { background: var(--danger); border-color: var(--danger); 
   border-radius: 6px;
   font-size: 15px;
 }
+
+/* ---------- Notes above the editor ---------- */
+.right-column { display: flex; flex-direction: column; min-height: 0; min-width: 0; padding: 8px 8px 8px 0; }
+.right-column .notes-strip { flex: 0 0 auto; display: flex; min-height: 0; }
+.right-column .notes-strip > .pane-section { flex: 1; }
+.right-column .editor-pane { margin: 0; flex: 1 1 0; }
+.splitter { flex: 0 0 8px; cursor: row-resize; position: relative; }
+.splitter::after { content: ''; position: absolute; left: 40%; right: 40%; top: 3px; height: 2px; border-radius: 1px; background: var(--border); }
+.splitter:hover::after, .right-column.dragging .splitter::after { background: var(--accent); }
+.right-column.dragging { cursor: row-resize; user-select: none; }
+.section-head.fixed { cursor: default; }
+.section-actions button {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  border-radius: 4px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 4px;
+  cursor: pointer;
+}
+.section-actions button:hover { background: var(--hover); color: var(--text); }

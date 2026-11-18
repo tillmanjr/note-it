@@ -4,8 +4,10 @@ import { LeftPane, type View } from './LeftPane'
 import { NoteEditor } from './NoteEditor'
 import { SearchOverlay, type SearchScope } from './SearchOverlay'
 import { ImportDialog } from './ImportDialog'
+import { NotesAboveEditor, NotesSection, useNotesPlacement } from './NotesSection'
 
-// Two panes: left (notebooks, tags, notes, trash) and the editor. Search is an overlay.
+// Two panes: left (notebooks, tags, notes, trash) and the editor. The notes list can instead sit above the
+// editor. Search is an overlay.
 export function Workspace({ store }: { store: NoteStore }) {
   const [notebooks, setNotebooks] = useState<Notebook[]>([])
   const [tags, setTags] = useState<Tag[]>([])
@@ -16,6 +18,7 @@ export function Workspace({ store }: { store: NoteStore }) {
   const [current, setCurrent] = useState<NoteMeta | null>(null)
   const [searchOpen, setSearchOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
+  const [notesPlacement, setNotesPlacement] = useNotesPlacement()
 
   const refreshOrganization = useCallback(async () => {
     const [nbs, ts] = await Promise.all([store.listNotebooks(), store.listTags()])
@@ -101,6 +104,23 @@ export function Workspace({ store }: { store: NoteStore }) {
     return null
   }, [view, title])
 
+  const editor = current ? (
+    <NoteEditor
+      key={current.id}
+      store={store}
+      note={current}
+      notebooks={notebooks}
+      tags={tags}
+      onPatch={(patch) => patchNote(current.id, patch)}
+      onTagsCreated={refreshOrganization}
+      onRemoved={() => closeRemoved(current.id)}
+    />
+  ) : (
+    <div className="editor-pane empty">
+      {view.kind === 'trash' ? 'Select a note to restore or delete it.' : 'Select a note, or press Ctrl+N for a new one.'}
+    </div>
+  )
+
   return (
     <div className="workspace">
       <LeftPane
@@ -112,6 +132,8 @@ export function Workspace({ store }: { store: NoteStore }) {
         notes={notes}
         sort={sort}
         selectedId={current?.id ?? null}
+        notesPlacement={notesPlacement}
+        onNotesPlacement={setNotesPlacement}
         onView={setView}
         onSort={setSort}
         onSelect={(id) => void openNote(id)}
@@ -124,21 +146,27 @@ export function Workspace({ store }: { store: NoteStore }) {
           if (current) await openNote(current.id)
         }}
       />
-      {current ? (
-        <NoteEditor
-          key={current.id}
-          store={store}
-          note={current}
-          notebooks={notebooks}
-          tags={tags}
-          onPatch={(patch) => patchNote(current.id, patch)}
-          onTagsCreated={refreshOrganization}
-          onRemoved={() => closeRemoved(current.id)}
+      {notesPlacement === 'top' ? (
+        <NotesAboveEditor
+          notesSection={
+            <NotesSection
+              notes={notes}
+              notebooks={notebooks}
+              viewTitle={title}
+              inTrash={view.kind === 'trash'}
+              sort={sort}
+              selectedId={current?.id ?? null}
+              placement="top"
+              collapsed={false}
+              onSort={setSort}
+              onSelect={(id) => void openNote(id)}
+              onPlacement={setNotesPlacement}
+            />
+          }
+          editor={editor}
         />
       ) : (
-        <div className="editor-pane empty">
-          {view.kind === 'trash' ? 'Select a note to restore or delete it.' : 'Select a note, or press Ctrl+N for a new one.'}
-        </div>
+        editor
       )}
       {importOpen && (
         <ImportDialog

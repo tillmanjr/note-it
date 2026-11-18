@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { buildTagTree, tagPath, type Id, type NoteMeta, type NoteSort, type NoteStore, type Notebook, type Tag, type TagNode } from '@tdjr/core'
 import { ConfirmButton, ConfirmDialog, InlineEdit, ThemeToggle } from './controls'
-import { NoteList } from './NoteList'
+import { NotesSection, type NotesPlacement } from './NotesSection'
 import { Section, useCollapsedSections } from './Section'
 
 export type View = { kind: 'all' } | { kind: 'trash' } | { kind: 'notebook'; id: Id } | { kind: 'tag'; id: Id }
@@ -15,6 +15,8 @@ interface Props {
   notes: NoteMeta[]
   sort: NoteSort
   selectedId: Id | null
+  notesPlacement: NotesPlacement
+  onNotesPlacement: (p: NotesPlacement) => void
   onView: (v: View) => void
   onSort: (s: NoteSort) => void
   onSelect: (id: Id) => void
@@ -25,8 +27,9 @@ interface Props {
 }
 
 // Single left pane: actions, then collapsible Notebooks / Tags / Notes sections, Trash pinned at the bottom.
+// Notes can instead sit above the editor (see NotesAboveEditor); then Notebooks and Tags share the pane.
 export function LeftPane({
-  store, notebooks, tags, view, viewTitle, notes, sort, selectedId,
+  store, notebooks, tags, view, viewTitle, notes, sort, selectedId, notesPlacement, onNotesPlacement,
   onView, onSort, onSelect, onNew, onSearch, onImport, onChanged,
 }: Props) {
   const [editing, setEditing] = useState<Id | null>(null)
@@ -229,37 +232,22 @@ export function LeftPane({
           {tree.length === 0 && <div className="hint">No tags yet. Add one here or type a path like projects/house on a note.</div>}
         </Section>
 
-        <Section
-          className={inTrash ? 'notes trash' : 'notes'}
-          title={
-            inTrash ? (
-              <>Trash ({notes.length})</>
-            ) : (
-              <>
-                Notes <span className="context">· {viewTitle} ({notes.length})</span>
-              </>
-            )
-          }
-          collapsed={sections.isCollapsed('notes')}
-          onToggle={() => sections.toggle('notes')}
-          actions={
-            <select value={sort} onChange={(e) => onSort(e.target.value as NoteSort)} title="Sort notes">
-              <option value="updated">Last edited</option>
-              <option value="created">Created</option>
-              <option value="title">Title</option>
-            </select>
-          }
-        >
-          <NoteList
+        {notesPlacement === 'left' && (
+          <NotesSection
             notes={notes}
             notebooks={notebooks}
-            selectedId={selectedId}
+            viewTitle={viewTitle}
+            inTrash={inTrash}
             sort={sort}
-            trashed={inTrash}
-            emptyText={inTrash ? 'Trash is empty.' : 'No notes here yet.'}
+            selectedId={selectedId}
+            placement="left"
+            collapsed={sections.isCollapsed('notes')}
+            onToggle={() => sections.toggle('notes')}
+            onSort={onSort}
             onSelect={onSelect}
+            onPlacement={onNotesPlacement}
           />
-        </Section>
+        )}
       </div>
 
       <div className={`row pane-bottom ${isActive({ kind: 'trash' }) ? 'active' : ''}`} onClick={() => open({ kind: 'trash' })}>

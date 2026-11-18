@@ -12,6 +12,8 @@ Status: 2a done, 2b (Evernote import) done (2026-11-17). Builds on [`design.md`]
 | Note body format | **Yjs document per note from day one** (TipTap Collaboration extension), even before sync exists, so 2b adds sync without a data migration. |
 | Local storage | SQLite on device behind a `Store` interface in shared code. Tauri adapter first; Capacitor adapter for mobile later. FTS5 for search. |
 | Layout | Two panes: left pane with collapsible Notebooks / Tags / Notes sections and Trash pinned at the bottom; editor on the right. Search is an overlay (Ctrl+Shift+F). |
+| Notes list placement | Per device, switched by a button on the Notes header: in the left pane (default), or in a strip above the editor with a draggable divider (height remembered per device). Above the editor, the strip doesn't collapse and Notebooks / Tags get the full left pane. Opening a notebook, tag, All notes or Trash expands a collapsed Notes section. |
+| Theme | Light / Dark / System toggle, per device. `data-theme` on `<html>` is set before first paint; note text colors use `--note-max` / `--note-min`. |
 
 ## Order (import early)
 
@@ -101,7 +103,7 @@ ENML mapping:
   becomes the theme-aware "maximum contrast" color, so it stays readable in dark mode; other colors
   are kept as-is.
 
-Verified against three real exports (105 notes): all imported with no text loss
+Verified against three real exports (105 notes), then again after the user reorganized them into ten (144 notes): all imported with no text loss
 (`ENEX_DIR=… npx vitest run real-exports` in `packages/enex`; the test is git-ignored and prints counts
 only). One Evernote export omitted an image it references; the importer reports it.
 

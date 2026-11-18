@@ -1,6 +1,6 @@
 # Where we are
 
-Checkpoint: 2026-11-18, after commit `cd21a34`.
+Checkpoint: 2026-11-18.
 
 ## Done
 - **Milestone 1:** editor spike (`spike/editor`, frozen). See [editor-spike.md](editor-spike.md).
@@ -16,6 +16,7 @@ Checkpoint: 2026-11-18, after commit `cd21a34`.
 - **Theme toggle:** a ◐ / ☀ / ☾ button next to Search cycles System → Light → Dark.
   - The choice is saved per device (localStorage `tdjr.theme`).
   - `index.html` sets `data-theme` before first paint, and `src/theme.ts` keeps it current and themes the Tauri title bar.
+- **Notes list placement:** a button on the Notes header moves the list between the left pane and a strip above the editor, with a draggable divider. Opening a view expands a collapsed Notes section.
 - **Trash:**
   - Empty Trash: the "Empty" action on the Trash row opens a confirmation dialog that shows the note count.
   - In Trash view, the Notes section header reads "Trash (n)" in red, and the rows are muted with a red left edge.

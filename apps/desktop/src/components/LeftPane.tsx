@@ -3,7 +3,7 @@ import { buildTagTree, tagPath, type Id, type NoteMeta, type NoteSort, type Note
 import { ConfirmButton, ConfirmDialog, InlineEdit } from './controls'
 import { SettingsMenu } from './SettingsMenu'
 import { useTheme } from '../theme'
-import logo from '../../app-icon.svg'
+import { Logo } from './Logo'
 import { NotesSection, type NotesPlacement } from './NotesSection'
 import { Section, useCollapsedSections } from './Section'
 
@@ -163,7 +163,7 @@ export function LeftPane({
   return (
     <nav className="left-pane">
       <header className="app-bar">
-        <img className="app-logo" src={logo} alt="Notes" title="Notes" />
+        <Logo />
         <SettingsMenu theme={theme} onTheme={setTheme} onImport={onImport} />
       </header>
       <div className="pane-top">

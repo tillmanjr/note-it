@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- App logo / icon source. Regenerate the platform icons with: npx tauri icon app-icon.svg (in apps/desktop). -->
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3d8fe0"/>
+      <stop offset="1" stop-color="#1d5ea6"/>
+    </linearGradient>
+  </defs>
+  <rect x="64" y="64" width="896" height="896" rx="200" fill="url(#tile)"/>
+  <!-- Sheet shadow -->
+  <path d="M320 232H602L752 382V792Q752 840 704 840H320Q272 840 272 792V280Q272 232 320 232Z" fill="#0b2f57" opacity="0.28"/>
+  <!-- Sheet with a folded top-right corner -->
+  <path d="M320 208H602L752 358V768Q752 816 704 816H320Q272 816 272 768V256Q272 208 320 208Z" fill="#ffffff"/>
+  <path d="M602 208V318Q602 358 642 358H752Z" fill="#c9def3"/>
+  <!-- Title and text lines -->
+  <rect x="344" y="436" width="272" height="60" rx="30" fill="#2370b8"/>
+  <rect x="344" y="552" width="336" height="44" rx="22" fill="#c3ccd6"/>
+  <rect x="344" y="652" width="240" height="44" rx="22" fill="#c3ccd6"/>
+</svg>

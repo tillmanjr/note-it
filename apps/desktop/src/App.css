@@ -408,8 +408,8 @@ button.primary.danger { background: var(--danger); border-color: var(--danger); 
 .section-actions button:hover { background: var(--hover); color: var(--text); }
 
 /* ---------- App bar and settings menu ---------- */
-.app-bar { display: flex; align-items: center; height: 28px; padding: 0 2px 0 6px; }
-.app-name { flex: 1; font-size: 13px; font-weight: 700; letter-spacing: 0.02em; color: var(--muted); }
+.app-bar { display: flex; align-items: center; height: 28px; padding: 0 2px 0 2px; }
+.app-logo { width: 24px; height: 24px; margin-right: auto; display: block; }
 .settings { position: relative; }
 .left-pane button.settings-button { font-size: 16px; width: 28px; height: 28px; border-radius: 6px; }
 .left-pane button.settings-button.open { background: var(--active); color: var(--text); }

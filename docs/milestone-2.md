@@ -13,7 +13,8 @@ Status: 2a done, 2b (Evernote import) done (2026-11-17). Builds on [`design.md`]
 | Local storage | SQLite on device behind a `Store` interface in shared code. Tauri adapter first; Capacitor adapter for mobile later. FTS5 for search. |
 | Layout | Two panes: left pane with collapsible Notebooks / Tags / Notes sections and Trash pinned at the bottom; editor on the right. Search is an overlay (Ctrl+Shift+F). |
 | Notes list placement | Per device, switched by a button on the Notes header: in the left pane (default), or in a strip above the editor with a draggable divider (height remembered per device). Above the editor, the strip doesn't collapse and Notebooks / Tags get the full left pane. Opening a notebook, tag, All notes or Trash expands a collapsed Notes section. |
-| App bar | A strip at the top of the left pane: app name and a ⚙ menu for app-level settings and actions (theme, Import notebooks…). New app-level items go in that menu, not on section headers. |
+| App bar | A strip at the top of the left pane: the logo and a ⚙ menu for app-level settings and actions (theme, Import notebooks…). New app-level items go in that menu, not on section headers. |
+| Logo / icon | `apps/desktop/app-icon.svg` is the single source: a blue tile (accent color) with a white note sheet, folded corner, blue title bar and two text lines. It is the favicon and app-bar logo; platform icons in `src-tauri/icons` are generated with `npx tauri icon app-icon.svg` (Android/iOS sets dropped; mobile is Capacitor). |
 | Theme | Light / Dark / System, per device, chosen in the ⚙ menu. `data-theme` on `<html>` is set before first paint; note text colors use `--note-max` / `--note-min`. |
 
 ## Order (import early)

@@ -1,5 +1,23 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useTheme, type ThemePref } from '../theme'
+
+const THEMES: Record<ThemePref, { icon: string; label: string; next: ThemePref }> = {
+  system: { icon: '◐', label: 'System', next: 'light' },
+  light: { icon: '☀', label: 'Light', next: 'dark' },
+  dark: { icon: '☾', label: 'Dark', next: 'system' },
+}
+
+/** Cycles the app theme: System → Light → Dark. */
+export function ThemeToggle() {
+  const [pref, setPref] = useTheme()
+  const { icon, label, next } = THEMES[pref]
+  return (
+    <button className="theme-toggle" title={`Theme: ${label} (click for ${THEMES[next].label})`} onClick={() => setPref(next)}>
+      {icon}
+    </button>
+  )
+}
 
 /** Text that turns into an input for editing; Enter/blur commits, Escape cancels. */
 export function InlineEdit({

@@ -383,3 +383,14 @@ button.primary:active:not(:disabled),
 .confirm-dialog { width: min(420px, 100%); }
 .confirm-dialog > .hint { margin: 0; padding: 16px; font-size: 13.5px; color: var(--text); }
 button.primary.danger { background: var(--danger); border-color: var(--danger); }
+
+/* ---------- Theme toggle ---------- */
+.left-pane .pane-top button.theme-toggle {
+  flex: 0 0 auto;
+  width: 30px;
+  height: auto;
+  border: 1px solid var(--border);
+  background: var(--paper);
+  border-radius: 6px;
+  font-size: 15px;
+}

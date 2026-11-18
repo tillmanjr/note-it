@@ -13,6 +13,9 @@ Checkpoint: 2026-11-18, after commit `cd21a34`.
   - Black and white swatches are theme-aware contrast colors (`var(--note-max)` / `var(--note-min)`).
   - Pasted and imported near-black text maps to maximum contrast. Verified after the re-import: 552 runs became `--note-max`, and no literal near-black is left.
   - White stays literal on import (1 run in the exports), so `--note-min` only comes from the editor swatch.
+- **Theme toggle:** a ◐ / ☀ / ☾ button next to Search cycles System → Light → Dark.
+  - The choice is saved per device (localStorage `tdjr.theme`).
+  - `index.html` sets `data-theme` before first paint, and `src/theme.ts` keeps it current and themes the Tauri title bar.
 - **Trash:**
   - Empty Trash: the "Empty" action on the Trash row opens a confirmation dialog that shows the note count.
   - In Trash view, the Notes section header reads "Trash (n)" in red, and the rows are muted with a red left edge.

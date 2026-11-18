@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { buildTagTree, tagPath, type Id, type NoteMeta, type NoteSort, type NoteStore, type Notebook, type Tag, type TagNode } from '@tdjr/core'
-import { ConfirmButton, ConfirmDialog, InlineEdit } from './controls'
+import { ConfirmButton, ConfirmDialog, InlineEdit, ThemeToggle } from './controls'
 import { NoteList } from './NoteList'
 import { Section, useCollapsedSections } from './Section'
 
@@ -156,6 +156,7 @@ export function LeftPane({
         <button className="search-button" title="Search (Ctrl+Shift+F)" onClick={onSearch}>
           🔍 Search
         </button>
+        <ThemeToggle />
       </div>
 
       <div className="pane-sections">

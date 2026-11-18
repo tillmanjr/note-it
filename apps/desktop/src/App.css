@@ -385,17 +385,6 @@ button.primary:active:not(:disabled),
 .confirm-dialog > .hint { margin: 0; padding: 16px; font-size: 13.5px; color: var(--text); }
 button.primary.danger { background: var(--danger); border-color: var(--danger); }
 
-/* ---------- Theme toggle ---------- */
-.left-pane .pane-top button.theme-toggle {
-  flex: 0 0 auto;
-  width: 30px;
-  height: auto;
-  border: 1px solid var(--border);
-  background: var(--paper);
-  border-radius: 6px;
-  font-size: 15px;
-}
-
 /* ---------- Notes above the editor ---------- */
 .right-column { display: flex; flex-direction: column; min-height: 0; min-width: 0; padding: 8px 8px 8px 0; }
 .right-column .notes-strip { flex: 0 0 auto; display: flex; min-height: 0; }
@@ -417,3 +406,40 @@ button.primary.danger { background: var(--danger); border-color: var(--danger); 
   cursor: pointer;
 }
 .section-actions button:hover { background: var(--hover); color: var(--text); }
+
+/* ---------- App bar and settings menu ---------- */
+.app-bar { display: flex; align-items: center; height: 28px; padding: 0 2px 0 6px; }
+.app-name { flex: 1; font-size: 13px; font-weight: 700; letter-spacing: 0.02em; color: var(--muted); }
+.settings { position: relative; }
+.left-pane button.settings-button { font-size: 16px; width: 28px; height: 28px; border-radius: 6px; }
+.left-pane button.settings-button.open { background: var(--active); color: var(--text); }
+.settings-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 40;
+  width: 248px;
+  padding: 6px;
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-md);
+}
+.menu-label { padding: 4px 8px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+.menu-separator { height: 1px; margin: 6px 2px; background: var(--border); }
+.segmented { display: flex; gap: 2px; margin: 2px 4px 4px; padding: 2px; border-radius: 7px; background: var(--panel); border: 1px solid var(--border); }
+.left-pane .segmented button { flex: 1; height: 26px; font-size: 12px; color: var(--muted); }
+.left-pane .segmented button.on { background: var(--paper); color: var(--text); box-shadow: var(--shadow-xs); }
+.segment-icon { font-size: 13px; }
+.left-pane button.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 32px;
+  padding: 0 8px;
+  color: var(--text);
+  text-align: left;
+}
+.menu-icon { width: 16px; text-align: center; }
+.menu-hint { margin-left: auto; font-size: 11px; color: var(--muted); }

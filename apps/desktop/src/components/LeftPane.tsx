@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { buildTagTree, tagPath, type Id, type NoteMeta, type NoteSort, type NoteStore, type Notebook, type Tag, type TagNode } from '@tdjr/core'
-import { ConfirmButton, ConfirmDialog, InlineEdit, ThemeToggle } from './controls'
+import { ConfirmButton, ConfirmDialog, InlineEdit } from './controls'
+import { SettingsMenu } from './SettingsMenu'
+import { useTheme } from '../theme'
 import { NotesSection, type NotesPlacement } from './NotesSection'
 import { Section, useCollapsedSections } from './Section'
 
@@ -26,7 +28,7 @@ interface Props {
   onChanged: () => Promise<void>
 }
 
-// Single left pane: actions, then collapsible Notebooks / Tags / Notes sections, Trash pinned at the bottom.
+// Single left pane: app bar (⚙ menu), actions, then collapsible Notebooks / Tags / Notes sections, Trash pinned at the bottom.
 // Notes can instead sit above the editor (see NotesAboveEditor); then Notebooks and Tags share the pane.
 export function LeftPane({
   store, notebooks, tags, view, viewTitle, notes, sort, selectedId, notesPlacement, onNotesPlacement,
@@ -35,6 +37,8 @@ export function LeftPane({
   const [editing, setEditing] = useState<Id | null>(null)
   const [collapsed, setCollapsed] = useState<Set<Id>>(new Set())
   const sections = useCollapsedSections()
+  // Owned here (always mounted) so System mode keeps following the OS while the menu is closed.
+  const [theme, setTheme] = useTheme()
   // Trashed-note count while the Empty Trash confirmation is open.
   const [emptying, setEmptying] = useState<number | null>(null)
   const inTrash = view.kind === 'trash'
@@ -157,6 +161,10 @@ export function LeftPane({
 
   return (
     <nav className="left-pane">
+      <header className="app-bar">
+        <span className="app-name">Notes</span>
+        <SettingsMenu theme={theme} onTheme={setTheme} onImport={onImport} />
+      </header>
       <div className="pane-top">
         <button className="primary" title="New note (Ctrl+N)" onClick={onNew} disabled={view.kind === 'trash'}>
           ＋ New note
@@ -164,7 +172,6 @@ export function LeftPane({
         <button className="search-button" title="Search (Ctrl+Shift+F)" onClick={onSearch}>
           🔍 Search
         </button>
-        <ThemeToggle />
       </div>
 
       <div className="pane-sections">
@@ -173,12 +180,7 @@ export function LeftPane({
           title={withSelection('Notebooks', selectedNotebook)}
           collapsed={sections.isCollapsed('notebooks')}
           onToggle={() => sections.toggle('notebooks')}
-          actions={
-            <>
-              <button title="Import from Evernote (.enex)" onClick={onImport}>⤓</button>
-              <button title="New notebook" onClick={() => void addNotebook()}>＋</button>
-            </>
-          }
+          actions={<button title="New notebook" onClick={() => void addNotebook()}>＋</button>}
         >
           <ul>
             <li>

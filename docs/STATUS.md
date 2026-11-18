@@ -13,7 +13,8 @@ Checkpoint: 2026-11-18.
   - Black and white swatches are theme-aware contrast colors (`var(--note-max)` / `var(--note-min)`).
   - Pasted and imported near-black text maps to maximum contrast. Verified after the re-import: 552 runs became `--note-max`, and no literal near-black is left.
   - White stays literal on import (1 run in the exports), so `--note-min` only comes from the editor swatch.
-- **Theme toggle:** a ◐ / ☀ / ☾ button next to Search cycles System → Light → Dark.
+- **App bar and ⚙ menu:** a strip above New note / Search with the app name and a ⚙ button. Its menu holds the theme (System / Light / Dark) and "Import notebooks…" (moved off the Notebooks header).
+- **Theme:** System / Light / Dark, chosen in the ⚙ menu.
   - The choice is saved per device (localStorage `tdjr.theme`).
   - `index.html` sets `data-theme` before first paint, and `src/theme.ts` keeps it current and themes the Tauri title bar.
 - **Notes list placement:** a button on the Notes header moves the list between the left pane and a strip above the editor, with a draggable divider. Opening a view expands a collapsed Notes section.

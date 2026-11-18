@@ -13,10 +13,11 @@ function loadCollapsed(): Set<string> {
 /** Which left-pane sections are collapsed, remembered per device (a UI convenience only). */
 export function useCollapsedSections() {
   const [collapsed, setCollapsed] = useState(loadCollapsed)
-  const toggle = (id: string) =>
+  const set = (id: string, open: boolean) =>
     setCollapsed((prev) => {
+      if (prev.has(id) !== open) return prev
       const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
+      if (open) next.delete(id)
       else next.add(id)
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify([...next]))
@@ -25,7 +26,11 @@ export function useCollapsedSections() {
       }
       return next
     })
-  return { isCollapsed: (id: string) => collapsed.has(id), toggle }
+  return {
+    isCollapsed: (id: string) => collapsed.has(id),
+    toggle: (id: string) => set(id, collapsed.has(id)),
+    expand: (id: string) => set(id, true),
+  }
 }
 
 export function Section({

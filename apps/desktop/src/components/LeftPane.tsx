@@ -39,8 +39,13 @@ export function LeftPane({
   const selectedNotebook = view.kind === 'notebook' ? notebooks.find((n) => n.id === view.id)?.name : undefined
   const selectedTag = view.kind === 'tag' ? tagPath(tags, view.id) : undefined
   const clearSelection = () => onView({ kind: 'all' })
+  // Opening a view is almost always to see its notes, so it expands the Notes section.
+  const open = (v: View) => {
+    sections.expand('notes')
+    onView(v)
+  }
   // Clicking the selected notebook/tag again unselects it.
-  const select = (v: View) => (isActive(v) ? clearSelection() : onView(v))
+  const select = (v: View) => (isActive(v) ? clearSelection() : open(v))
   const withSelection = (label: string, selection?: string) => (
     <>
       {label}
@@ -174,7 +179,7 @@ export function LeftPane({
         >
           <ul>
             <li>
-              <div className={`row ${isActive({ kind: 'all' }) ? 'active' : ''}`} onClick={() => onView({ kind: 'all' })}>
+              <div className={`row ${isActive({ kind: 'all' }) ? 'active' : ''}`} onClick={() => open({ kind: 'all' })}>
                 <span className="label">All notes</span>
               </div>
             </li>
@@ -257,7 +262,7 @@ export function LeftPane({
         </Section>
       </div>
 
-      <div className={`row pane-bottom ${isActive({ kind: 'trash' }) ? 'active' : ''}`} onClick={() => onView({ kind: 'trash' })}>
+      <div className={`row pane-bottom ${isActive({ kind: 'trash' }) ? 'active' : ''}`} onClick={() => open({ kind: 'trash' })}>
         <span className="label">🗑 Trash</span>
         <span className="row-actions">
           <button

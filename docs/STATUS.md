@@ -34,6 +34,7 @@ Details are in [milestone-2.md](milestone-2.md); the overall plan is in [design.
   - dragging tags and notes
   - saved searches
   - note history
+  - **Backlog:** breadcrumbs (something like them), e.g. a trail showing where you are (notebook → note) and where you came from, to step back. Shape not yet decided.
 
 ## Next (not started; wait for the user's go-ahead)
 1. **2c:** server on the DigitalOcean droplet (Node/Fastify + Postgres), Yjs sync, passkeys and device tokens. Ask clarifying questions first, one at a time.

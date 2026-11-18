@@ -372,3 +372,14 @@ button.primary:active:not(:disabled),
 .import-report li:last-child { border-bottom: none; }
 .report-details { color: var(--muted); font-size: 12.5px; margin-top: 3px; }
 .report-warning { font-size: 12.5px; margin-top: 4px; color: var(--danger); }
+
+/* ---------- Trash ---------- */
+/* Trashed notes reuse the Notes section, marked in the danger color so they can't pass for live notes. */
+.pane-section.trash > .section-head .section-title { color: var(--danger); }
+.note-list.trashed li { color: var(--muted); box-shadow: inset 3px 0 0 var(--danger); }
+.note-list.trashed li.active { box-shadow: inset 3px 0 0 var(--danger), inset 0 1px 0 var(--highlight), var(--shadow-xs); }
+.note-list.trashed .note-title { font-weight: 400; }
+
+.confirm-dialog { width: min(420px, 100%); }
+.confirm-dialog > .hint { margin: 0; padding: 16px; font-size: 13.5px; color: var(--text); }
+button.primary.danger { background: var(--danger); border-color: var(--danger); }

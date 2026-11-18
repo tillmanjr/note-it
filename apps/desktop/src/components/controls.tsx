@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 /** Text that turns into an input for editing; Enter/blur commits, Escape cancels. */
 export function InlineEdit({
@@ -74,5 +75,49 @@ export function ConfirmButton({
     >
       {armed ? confirmLabel : label}
     </button>
+  )
+}
+
+/** A modal confirm for destructive actions that can't be undone. Escape or clicking outside cancels. */
+export function ConfirmDialog({
+  title,
+  message,
+  confirmLabel,
+  onConfirm,
+  onCancel,
+}: {
+  title: string
+  message: string
+  confirmLabel: string
+  onConfirm: () => void
+  onCancel: () => void
+}) {
+  const cancelRef = useRef<HTMLButtonElement>(null)
+  useEffect(() => {
+    cancelRef.current?.focus()
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onCancel()
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onCancel])
+  // Portaled to <body> so the dialog doesn't inherit the styles of whatever pane opened it.
+  return createPortal(
+    <div className="overlay" onMouseDown={onCancel}>
+      <div className="dialog confirm-dialog" role="alertdialog" aria-label={title} onMouseDown={(e) => e.stopPropagation()}>
+        <header>
+          <h2>{title}</h2>
+        </header>
+        <p className="hint">{message}</p>
+        <footer>
+          <span className="spacer" />
+          <button ref={cancelRef} onClick={onCancel}>
+            Cancel
+          </button>
+          <button className="primary danger" onClick={onConfirm}>
+            {confirmLabel}
+          </button>
+        </footer>
+      </div>
+    </div>,
+    document.body,
   )
 }

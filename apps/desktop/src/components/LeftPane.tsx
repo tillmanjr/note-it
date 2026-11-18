@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { buildTagTree, tagPath, type Id, type NoteMeta, type NoteSort, type NoteStore, type Notebook, type Tag, type TagNode } from '@tdjr/core'
-import { ConfirmButton, InlineEdit } from './controls'
+import { ConfirmButton, ConfirmDialog, InlineEdit } from './controls'
 import { NoteList } from './NoteList'
 import { Section, useCollapsedSections } from './Section'
 
@@ -32,6 +32,9 @@ export function LeftPane({
   const [editing, setEditing] = useState<Id | null>(null)
   const [collapsed, setCollapsed] = useState<Set<Id>>(new Set())
   const sections = useCollapsedSections()
+  // Trashed-note count while the Empty Trash confirmation is open.
+  const [emptying, setEmptying] = useState<number | null>(null)
+  const inTrash = view.kind === 'trash'
   // The current notebook / tag, echoed in its section header so it stays visible when collapsed.
   const selectedNotebook = view.kind === 'notebook' ? notebooks.find((n) => n.id === view.id)?.name : undefined
   const selectedTag = view.kind === 'tag' ? tagPath(tags, view.id) : undefined
@@ -221,11 +224,15 @@ export function LeftPane({
         </Section>
 
         <Section
-          className="notes"
+          className={inTrash ? 'notes trash' : 'notes'}
           title={
-            <>
-              Notes <span className="context">· {viewTitle} ({notes.length})</span>
-            </>
+            inTrash ? (
+              <>Trash ({notes.length})</>
+            ) : (
+              <>
+                Notes <span className="context">· {viewTitle} ({notes.length})</span>
+              </>
+            )
           }
           collapsed={sections.isCollapsed('notes')}
           onToggle={() => sections.toggle('notes')}
@@ -242,7 +249,8 @@ export function LeftPane({
             notebooks={notebooks}
             selectedId={selectedId}
             sort={sort}
-            emptyText={view.kind === 'trash' ? 'Trash is empty.' : 'No notes here yet.'}
+            trashed={inTrash}
+            emptyText={inTrash ? 'Trash is empty.' : 'No notes here yet.'}
             onSelect={onSelect}
           />
         </Section>
@@ -251,14 +259,33 @@ export function LeftPane({
       <div className={`row pane-bottom ${isActive({ kind: 'trash' }) ? 'active' : ''}`} onClick={() => onView({ kind: 'trash' })}>
         <span className="label">🗑 Trash</span>
         <span className="row-actions">
-          <ConfirmButton
-            label="Empty"
-            confirmLabel="Empty Trash?"
+          <button
             title="Permanently delete every note in the Trash"
-            onConfirm={() => void run(() => store.emptyTrash())}
-          />
+            onClick={async (e) => {
+              e.stopPropagation()
+              setEmptying((await store.queryNotes({ trash: true })).length)
+            }}
+          >
+            Empty
+          </button>
         </span>
       </div>
+      {emptying !== null && (
+        <ConfirmDialog
+          title="Empty Trash"
+          message={
+            emptying === 0
+              ? 'The Trash is already empty.'
+              : `Permanently delete ${emptying} ${emptying === 1 ? 'note' : 'notes'}? This can't be undone.`
+          }
+          confirmLabel={emptying === 0 ? 'OK' : 'Delete forever'}
+          onCancel={() => setEmptying(null)}
+          onConfirm={() => {
+            setEmptying(null)
+            void run(() => store.emptyTrash())
+          }}
+        />
+      )}
     </nav>
   )
 }

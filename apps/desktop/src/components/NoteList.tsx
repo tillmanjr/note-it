@@ -13,6 +13,7 @@ export function NoteList({
   notebooks,
   selectedId,
   sort,
+  trashed = false,
   emptyText,
   onSelect,
 }: {
@@ -20,13 +21,15 @@ export function NoteList({
   notebooks: Notebook[]
   selectedId: Id | null
   sort: NoteSort
+  /** The notes are in the Trash: styled so they can't be mistaken for live notes. */
+  trashed?: boolean
   emptyText: string
   onSelect: (id: Id) => void
 }) {
   const nbName = new Map(notebooks.map((n) => [n.id, n.name]))
   if (notes.length === 0) return <div className="hint">{emptyText}</div>
   return (
-    <ul className="note-list">
+    <ul className={trashed ? 'note-list trashed' : 'note-list'}>
       {notes.map((n) => {
         // One line per note keeps long lists scannable; the snippet and notebook are in the tooltip.
         const tip = [nbName.get(n.notebookId), n.snippet].filter(Boolean).join(' — ')

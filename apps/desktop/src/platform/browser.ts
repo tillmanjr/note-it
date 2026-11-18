@@ -19,12 +19,17 @@ export async function browserDriver(): Promise<SqlDriver> {
 
 export function browserBlobs(): BlobStore {
   const urls = new Map<string, string>()
+  const files = new Map<string, Uint8Array>()
   return {
     async has(hash) {
       return urls.has(hash)
     },
     async put(hash, bytes) {
+      files.set(hash, bytes)
       urls.set(hash, URL.createObjectURL(new Blob([bytes as Uint8Array<ArrayBuffer>])))
+    },
+    async read(hash) {
+      return files.get(hash) ?? null
     },
     url: (hash) => urls.get(hash) ?? '',
   }

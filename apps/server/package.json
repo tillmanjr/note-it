@@ -1,0 +1,29 @@
+{
+  "name": "@tdjr/server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "db:up": "docker compose up -d",
+    "dev": "tsx watch src/main.ts",
+    "start": "tsx src/main.ts",
+    "setup-code": "tsx src/main.ts --setup-code",
+    "typecheck": "tsc --noEmit -p .",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "@types/pg": "^8.23.1",
+    "@types/ws": "^8.18.2",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "yjs": "^13.6.33"
+  },
+  "dependencies": {
+    "@fastify/cors": "^11.4.3",
+    "@fastify/websocket": "^11.3.7",
+    "fastify": "^5.12.8",
+    "pg": "^8.23.1",
+    "ulid": "^3.0.2"
+  }
+}

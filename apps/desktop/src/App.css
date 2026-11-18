@@ -443,3 +443,40 @@ button.primary.danger { background: var(--danger); border-color: var(--danger); 
 }
 .menu-icon { width: 16px; text-align: center; }
 .menu-hint { margin-left: auto; font-size: 11px; color: var(--muted); }
+
+/* ---------- Sync ---------- */
+.settings-button { position: relative; }
+/* A small dot on the gear when sync needs attention (offline or stopped). */
+.sync-dot { position: absolute; top: 3px; right: 3px; width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+.sync-dot.error { background: var(--danger); }
+.left-pane button.menu-item.sync-state.offline { color: var(--muted); }
+.left-pane button.menu-item.sync-state.error { color: var(--danger); }
+.menu-note { padding: 2px 8px 6px 32px; font-size: 11.5px; line-height: 1.4; color: var(--muted); }
+
+.sync-dialog { width: min(460px, 100%); }
+.sync-dialog-body { padding: 4px 16px 12px; overflow-y: auto; }
+.sync-dialog-body > .hint { padding: 8px 0; font-size: 12.5px; line-height: 1.5; margin: 0; }
+.sync-dialog footer .error { color: var(--danger); font-size: 12.5px; }
+.form-fields { display: grid; gap: 10px; margin-top: 4px; }
+.form-fields label { display: grid; gap: 4px; font-size: 12px; font-weight: 600; color: var(--muted); }
+.form-fields input { padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); font-size: 13.5px; font-weight: 400; color: var(--text); }
+.form-fields input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+.device-code {
+  margin: 8px 0 4px;
+  padding: 14px;
+  text-align: center;
+  font: 600 28px/1 ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  letter-spacing: 0.12em;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  user-select: all;
+}
+.device-list { list-style: none; margin: 0; padding: 0; }
+.device-list li { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--border); font-size: 13px; }
+.device-list li:first-child { border-top: none; }
+.device-name { flex: 1; min-width: 0; font-weight: 600; }
+.device-name .badge { margin-left: 8px; font-size: 11px; font-weight: 500; color: var(--muted); }
+.device-seen { font-size: 12px; color: var(--muted); }
+.device-list button { border: 1px solid var(--border); background: var(--raised); border-radius: 6px; padding: 2px 10px; cursor: pointer; }
+.device-list button.danger { border-color: var(--danger); color: var(--danger); }

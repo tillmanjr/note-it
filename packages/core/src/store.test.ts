@@ -26,6 +26,9 @@ function memoryBlobs(): BlobStore & { files: Map<string, Uint8Array> } {
     async put(hash, bytes) {
       files.set(hash, bytes)
     },
+    async read(hash) {
+      return files.get(hash) ?? null
+    },
     url: (hash) => `blob://${hash}`,
   }
 }

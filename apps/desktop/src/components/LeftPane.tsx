@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { buildTagTree, tagPath, type Id, type NoteMeta, type NoteSort, type NoteStore, type Notebook, type Tag, type TagNode } from '@tdjr/core'
 import { ConfirmButton, ConfirmDialog, InlineEdit } from './controls'
-import { SettingsMenu } from './SettingsMenu'
+import { SettingsMenu, type SyncMenu } from './SettingsMenu'
 import { useTheme } from '../theme'
 import { Logo } from './Logo'
 import { NotesSection, type NotesPlacement } from './NotesSection'
@@ -26,6 +26,7 @@ interface Props {
   onNew: () => void
   onSearch: () => void
   onImport: () => void
+  sync: SyncMenu
   onChanged: () => Promise<void>
 }
 
@@ -33,7 +34,7 @@ interface Props {
 // Notes can instead sit above the editor (see NotesAboveEditor); then Notebooks and Tags share the pane.
 export function LeftPane({
   store, notebooks, tags, view, viewTitle, notes, sort, selectedId, notesPlacement, onNotesPlacement,
-  onView, onSort, onSelect, onNew, onSearch, onImport, onChanged,
+  onView, onSort, onSelect, onNew, onSearch, onImport, sync, onChanged,
 }: Props) {
   const [editing, setEditing] = useState<Id | null>(null)
   const [collapsed, setCollapsed] = useState<Set<Id>>(new Set())
@@ -164,7 +165,7 @@ export function LeftPane({
     <nav className="left-pane">
       <header className="app-bar">
         <Logo />
-        <SettingsMenu theme={theme} onTheme={setTheme} onImport={onImport} />
+        <SettingsMenu theme={theme} onTheme={setTheme} onImport={onImport} sync={sync} />
       </header>
       <div className="pane-top">
         <button className="primary" title="New note (Ctrl+N)" onClick={onNew} disabled={view.kind === 'trash'}>

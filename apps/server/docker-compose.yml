@@ -1,0 +1,14 @@
+# Local Postgres for developing the sync server: npm run db:up -w @tdjr/server
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: notes
+      POSTGRES_PASSWORD: notes
+      POSTGRES_DB: notes
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+volumes:
+  pgdata:

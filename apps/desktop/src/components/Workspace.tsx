@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Id, NoteMeta, NoteSort, NoteStore, Notebook, Tag } from '@tdjr/core'
 import { LeftPane, type View } from './LeftPane'
 import { NoteEditor } from './NoteEditor'
 import { SearchOverlay, type SearchScope } from './SearchOverlay'
 import { ImportDialog } from './ImportDialog'
 import { NotesAboveEditor, NotesSection, useNotesPlacement } from './NotesSection'
+import { AddDeviceDialog, ConnectDialog, DevicesDialog } from './SyncDialogs'
+import { useSync } from '../sync'
 
 // Two panes: left (notebooks, tags, notes, trash) and the editor. The notes list can instead sit above the
 // editor. Search is an overlay.
@@ -19,6 +21,8 @@ export function Workspace({ store }: { store: NoteStore }) {
   const [searchOpen, setSearchOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [notesPlacement, setNotesPlacement] = useNotesPlacement()
+  const sync = useSync(store)
+  const [syncDialog, setSyncDialog] = useState<'connect' | 'add' | 'devices' | null>(null)
 
   const refreshOrganization = useCallback(async () => {
     const [nbs, ts] = await Promise.all([store.listNotebooks(), store.listTags()])
@@ -43,6 +47,23 @@ export function Workspace({ store }: { store: NoteStore }) {
   useEffect(() => {
     void refreshNotes()
   }, [refreshNotes])
+
+  // Changes from other devices: refresh the lists and the open note's details (its body updates itself).
+  const currentId = useRef<Id | null>(null)
+  currentId.current = current?.id ?? null
+  useEffect(
+    () =>
+      store.onChange((e) => {
+        if (e.type !== 'remote') return
+        void refreshOrganization()
+        void refreshNotes()
+        const id = currentId.current
+        if (!id) return
+        if (e.purged.includes(id)) setCurrent(null)
+        else if (e.metadata || e.bodies.has(id)) void store.getNote(id).then((n) => setCurrent((c) => (c?.id === id ? n : c)))
+      }),
+    [store, refreshOrganization, refreshNotes],
+  )
 
   const openNote = useCallback(
     async (id: Id) => {
@@ -140,6 +161,13 @@ export function Workspace({ store }: { store: NoteStore }) {
         onNew={() => void newNote()}
         onSearch={() => setSearchOpen(true)}
         onImport={() => setImportOpen(true)}
+        sync={{
+          status: sync.status,
+          onConnect: () => setSyncDialog('connect'),
+          onSyncNow: () => void sync.client?.syncNow(),
+          onAddDevice: () => setSyncDialog('add'),
+          onDevices: () => setSyncDialog('devices'),
+        }}
         onChanged={async () => {
           await refreshOrganization()
           await refreshNotes()
@@ -179,6 +207,11 @@ export function Workspace({ store }: { store: NoteStore }) {
             else await refreshNotes()
           }}
         />
+      )}
+      {syncDialog === 'connect' && <ConnectDialog onConnect={sync.connect} onClose={() => setSyncDialog(null)} />}
+      {syncDialog === 'add' && sync.client && <AddDeviceDialog client={sync.client} onClose={() => setSyncDialog(null)} />}
+      {syncDialog === 'devices' && sync.client && (
+        <DevicesDialog client={sync.client} onDisconnectThis={sync.disconnect} onClose={() => setSyncDialog(null)} />
       )}
       {searchOpen && (
         <SearchOverlay

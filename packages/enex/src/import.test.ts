@@ -195,6 +195,7 @@ describe('importNotes', () => {
     const blobs: BlobStore = {
       has: async (h) => files.has(h),
       put: async (h, b) => void files.set(h, b),
+      read: async (h) => files.get(h) ?? null,
       url: (h) => `blob:${h}`,
     }
     store = new NoteStore(driver, blobs)

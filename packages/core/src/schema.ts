@@ -52,4 +52,24 @@ export const MIGRATIONS: string[][] = [
       created_at INTEGER NOT NULL
     )`,
   ],
+  // 2: sync bookkeeping (see ledger.ts).
+  [
+    `CREATE TABLE sync_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)`,
+    // Per-field HLC timestamps for last-writer-wins; pending = changed here and not yet acknowledged by the server.
+    `CREATE TABLE field_state (
+      kind TEXT NOT NULL,
+      id TEXT NOT NULL,
+      field TEXT NOT NULL,
+      ts TEXT NOT NULL,
+      pending INTEGER NOT NULL DEFAULT 1,
+      PRIMARY KEY (kind, id, field)
+    )`,
+    `CREATE INDEX field_state_pending ON field_state(pending)`,
+    // dirty counts local body updates not yet pushed; server_sv is the Yjs state vector the server is known to have.
+    `CREATE TABLE body_state (note_id TEXT PRIMARY KEY, dirty INTEGER NOT NULL DEFAULT 0, server_sv TEXT)`,
+    // Notes deleted forever, so late changes from other devices don't bring them back.
+    `CREATE TABLE purged_note (id TEXT PRIMARY KEY)`,
+    // Attachments known from other devices whose files haven't been downloaded yet.
+    `CREATE TABLE blob_missing (hash TEXT PRIMARY KEY)`,
+  ],
 ]

@@ -1,5 +1,5 @@
 import Database from '@tauri-apps/plugin-sql'
-import { exists, mkdir, writeFile, BaseDirectory } from '@tauri-apps/plugin-fs'
+import { exists, mkdir, readFile, writeFile, BaseDirectory } from '@tauri-apps/plugin-fs'
 import { appDataDir, join } from '@tauri-apps/api/path'
 import { convertFileSrc } from '@tauri-apps/api/core'
 import type { BlobStore, SqlDriver } from '@tdjr/core'
@@ -30,6 +30,10 @@ export async function tauriBlobs(): Promise<BlobStore> {
   return {
     has: (hash) => exists(`blobs/${hash}`, { baseDir: BaseDirectory.AppData }),
     put: (hash, bytes) => writeFile(`blobs/${hash}`, bytes, { baseDir: BaseDirectory.AppData }),
+    read: async (hash) =>
+      (await exists(`blobs/${hash}`, { baseDir: BaseDirectory.AppData }))
+        ? readFile(`blobs/${hash}`, { baseDir: BaseDirectory.AppData })
+        : null,
     url: (hash) => convertFileSrc(`${blobDir}${sep}${hash}`),
   }
 }

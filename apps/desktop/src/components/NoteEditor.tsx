@@ -8,6 +8,8 @@ import { ConfirmButton } from './controls'
 import { formatWhen } from './NoteList'
 
 const LOAD_ORIGIN = 'load'
+/** Updates synced from another device: already stored, so not saved again. */
+const REMOTE_ORIGIN = 'remote'
 const SAVE_DELAY_MS = 300
 const INDEX_DELAY_MS = 800
 const TITLE_DELAY_MS = 400
@@ -40,6 +42,21 @@ export function NoteEditor({ store, note, notebooks, tags, onPatch, onTagsCreate
       cancelled = true
     }
   }, [store, note.id])
+
+  // Edits to this note from another device merge into the open document.
+  useEffect(() => {
+    if (!doc) return
+    return store.onChange((e) => {
+      if (e.type !== 'remote') return
+      for (const update of e.bodies.get(note.id) ?? []) Y.applyUpdate(doc, update, REMOTE_ORIGIN)
+    })
+  }, [store, note.id, doc])
+
+  // A title changed on another device shows up here, unless the title is being edited.
+  const titleInput = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    if (document.activeElement !== titleInput.current) setTitle(note.title)
+  }, [note.title])
 
   // Debounced title save.
   const titleTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -78,6 +95,7 @@ export function NoteEditor({ store, note, notebooks, tags, onPatch, onTagsCreate
           </div>
         )}
         <input
+          ref={titleInput}
           className="note-title-input"
           value={title}
           placeholder="Title"
@@ -183,7 +201,7 @@ function NoteBody({
       if (touch) onPatch({ updatedAt: Date.now() })
     }
     const onUpdate = (update: Uint8Array, origin: unknown) => {
-      if (origin === LOAD_ORIGIN) return
+      if (origin === LOAD_ORIGIN || origin === REMOTE_ORIGIN) return
       pending.push(update)
       clearTimeout(timer)
       timer = setTimeout(flush, SAVE_DELAY_MS)

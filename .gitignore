@@ -6,3 +6,6 @@ dist/
 .env.*
 .claude/settings.local.json
 *.local.test.ts
+
+# Sync server local data (attachment files)
+apps/server/data/

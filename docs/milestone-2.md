@@ -1,6 +1,6 @@
 # Milestone 2 — Desktop + server MVP
 
-Status: 2a done, 2b (Evernote import) done (2026-11-17). Builds on [`design.md`](design.md) and the [editor spike](editor-spike.md).
+Status: 2a done, 2b (Evernote import) done (2026-11-17), 2c-1 (server + sync) done (2026-11-18; see [sync.md](sync.md)). Builds on [`design.md`](design.md) and the [editor spike](editor-spike.md).
 
 ## Decisions
 

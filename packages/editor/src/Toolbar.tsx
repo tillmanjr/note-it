@@ -1,6 +1,6 @@
 import { useEditorState, type Editor } from '@tiptap/react'
 import { BlockStyleSelect } from './BlockStyleSelect'
-import { COLORS, FONTS, HIGHLIGHTS, SIZES, colorLabel } from './formatting'
+import { FontMenu, HighlightMenu, ListMenu, TextColorMenu } from './FormatMenus'
 
 // Main formatting toolbar.
 export function Toolbar({ editor }: { editor: Editor }) {
@@ -11,7 +11,6 @@ export function Toolbar({ editor }: { editor: Editor }) {
       italic: e.isActive('italic'),
       underline: e.isActive('underline'),
       strike: e.isActive('strike'),
-      highlight: e.isActive('highlight'),
       code: e.isActive('code'),
       link: e.isActive('link'),
       bullet: e.isActive('bulletList'),
@@ -21,8 +20,6 @@ export function Toolbar({ editor }: { editor: Editor }) {
       left: e.isActive({ textAlign: 'left' }),
       center: e.isActive({ textAlign: 'center' }),
       right: e.isActive({ textAlign: 'right' }),
-      font: (e.getAttributes('textStyle').fontFamily as string) ?? '',
-      size: (e.getAttributes('textStyle').fontSize as string) ?? '',
     }),
   })
 
@@ -48,12 +45,8 @@ export function Toolbar({ editor }: { editor: Editor }) {
         {btn('↷', false, () => c().redo().run(), 'Redo')}
       </div>
       <div className="group">
-        <select value={s.font} onChange={(e) => (e.target.value ? c().setFontFamily(e.target.value).run() : c().unsetFontFamily().run())}>
-          {FONTS.map((f) => <option key={f} value={f}>{f || 'Font'}</option>)}
-        </select>
-        <select value={s.size} onChange={(e) => (e.target.value ? c().setFontSize(e.target.value).run() : c().unsetFontSize().run())}>
-          {SIZES.map((z) => <option key={z} value={z}>{z || 'Size'}</option>)}
-        </select>
+        <BlockStyleSelect editor={editor} />
+        <FontMenu editor={editor} />
       </div>
       <div className="group">
         {btn('B', s.bold, () => c().toggleBold().run(), 'Bold (Ctrl+B)')}
@@ -63,24 +56,13 @@ export function Toolbar({ editor }: { editor: Editor }) {
         {btn('</>', s.code, () => c().toggleCode().run(), 'Inline code')}
         {btn('🔗', s.link, setLink, 'Link')}
       </div>
-      <div className="group swatches">
-        {COLORS.map((col) => (
-          <button key={col} className="swatch" style={{ background: col }} title={colorLabel(col)}
-            onMouseDown={(ev) => ev.preventDefault()} onClick={() => c().setColor(col).run()} />
-        ))}
-        {HIGHLIGHTS.map((col) => (
-          <button key={col} className="swatch hl" style={{ background: col }} title={`Highlight ${col}`}
-            onMouseDown={(ev) => ev.preventDefault()} onClick={() => c().toggleHighlight({ color: col }).run()} />
-        ))}
+      <div className="group">
+        <TextColorMenu editor={editor} />
+        <HighlightMenu editor={editor} />
         {btn('⌫', false, () => c().unsetAllMarks().run(), 'Clear formatting')}
       </div>
       <div className="group">
-        <BlockStyleSelect editor={editor} />
-      </div>
-      <div className="group">
-        {btn('•', s.bullet, () => c().toggleBulletList().run(), 'Bulleted list')}
-        {btn('1.', s.ordered, () => c().toggleOrderedList().run(), 'Numbered list')}
-        {btn('☑', s.task, () => c().toggleTaskList().run(), 'Checklist')}
+        <ListMenu editor={editor} />
         {btn('⇤', false, () => (s.bullet || s.ordered || s.task ? c().liftListItem(s.task ? 'taskItem' : 'listItem').run() : c().outdent().run()), 'Outdent (Shift+Tab)')}
         {btn('⇥', false, () => (s.bullet || s.ordered || s.task ? c().sinkListItem(s.task ? 'taskItem' : 'listItem').run() : c().indent().run()), 'Indent (Tab)')}
       </div>

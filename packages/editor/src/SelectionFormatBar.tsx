@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useEditorState, type Editor } from '@tiptap/react'
 import { BubbleMenu } from '@tiptap/react/menus'
 import { BlockStyleSelect } from './BlockStyleSelect'
-import { COLORS, HIGHLIGHTS, colorLabel } from './formatting'
+import { HighlightMenu, TextColorMenu } from './FormatMenus'
 
 const PLUGIN_KEY = 'selectionFormatBar'
 
@@ -66,14 +66,11 @@ export function SelectionFormatBar({ editor }: { editor: Editor }) {
       bold: e.isActive('bold'),
       italic: e.isActive('italic'),
       code: e.isActive('code'),
-      color: (e.getAttributes('textStyle').color as string) ?? '',
-      highlight: (e.getAttributes('highlight').color as string) ?? '',
     }),
   })
 
   const c = () => editor.chain().focus()
   const keepSelection = (ev: React.MouseEvent) => ev.preventDefault()
-
 
   return (
     <BubbleMenu
@@ -104,17 +101,8 @@ export function SelectionFormatBar({ editor }: { editor: Editor }) {
         {'</>'}
       </button>
       <span className="sep" />
-      {COLORS.map((col) => (
-        <button key={col} className={`swatch${s.color === col ? ' active' : ''}`} style={{ background: col }} title={colorLabel(col)}
-          onMouseDown={keepSelection} onClick={() => c().setColor(col).run()} />
-      ))}
-      <button className="swatch none" title="Default text color" onMouseDown={keepSelection} onClick={() => c().unsetColor().run()} />
-      <span className="sep" />
-      {HIGHLIGHTS.map((col) => (
-        <button key={col} className={`swatch hl${s.highlight === col ? ' active' : ''}`} style={{ background: col }} title={`Highlight ${col}`}
-          onMouseDown={keepSelection} onClick={() => c().setHighlight({ color: col }).run()} />
-      ))}
-      <button className="swatch hl none" title="Remove highlight" onMouseDown={keepSelection} onClick={() => c().unsetHighlight().run()} />
+      <TextColorMenu editor={editor} />
+      <HighlightMenu editor={editor} />
     </BubbleMenu>
   )
 }

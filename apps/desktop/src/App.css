@@ -198,37 +198,63 @@ button.primary {
   background: var(--paper);
 }
 .editor-pane.empty { display: grid; place-items: center; color: var(--muted); }
-.note-header { padding: 14px 28px 6px; }
 .trash-bar {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 8px 10px;
-  margin-bottom: 10px;
+  margin: 10px 12px 0;
   border-radius: 6px;
   background: var(--panel);
 }
 .trash-bar span { flex: 1; }
-.trash-bar button, .note-props button {
+.trash-bar button, .note-footer button {
   border: 1px solid var(--border);
   background: var(--bg);
   border-radius: 6px;
   padding: 3px 10px;
   cursor: pointer;
 }
-.trash-bar button.danger, .note-props button.danger { border-color: var(--danger); color: var(--danger); }
+.trash-bar button.danger, .note-footer button.danger { border-color: var(--danger); color: var(--danger); }
+/* The title is the note's first line: same column as the text, fixed title styling, wraps and grows. */
 .note-title-input {
+  display: block;
   width: 100%;
   border: none;
   outline: none;
   background: transparent;
+  color: var(--text);
+  font: inherit;
   font-size: 24px;
   font-weight: 600;
-  padding: 4px 0;
+  line-height: 1.3;
+  padding: 0;
+  margin: 0 0 0.45em;
+  resize: none;
+  overflow: hidden;
 }
-.note-props { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 4px; color: var(--muted); font-size: 12.5px; }
-.note-props select { border: 1px solid var(--border); border-radius: 6px; background: var(--bg); padding: 2px 6px; }
-.note-props .spacer { flex: 1; }
+.note-title-input::placeholder { color: var(--muted); opacity: 0.7; }
+/* Notebook, tags, edited time and trash: a strip fixed to the bottom of the note. */
+.note-footer {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  min-height: 34px;
+  padding: 4px 12px;
+  border-top: 1px solid var(--border);
+  background: var(--raised);
+  color: var(--muted);
+  font-size: 12px;
+}
+.note-footer select { border: 1px solid var(--border); border-radius: 6px; background: var(--bg); padding: 1px 6px; font-size: 12px; color: var(--text); }
+.note-footer button { padding: 1px 8px; }
+.note-footer .spacer { flex: 1; }
+.note-footer .tag-chip { font-size: 11.5px; }
+.note-footer .tag-picker input { min-width: 150px; font-size: 12px; }
+/* At the bottom of the window, tag suggestions open upward. */
+.note-footer .tag-suggestions { top: auto; bottom: calc(100% + 4px); }
 .tag-picker { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
 .tag-chip {
   display: inline-flex;
@@ -276,9 +302,10 @@ button.primary {
 .tag-suggestion-parent { color: var(--muted); }
 .tag-suggestion-hint { flex: 0 0 auto; color: var(--muted); font-size: 11px; }
 
-.editor-pane .toolbar { margin: 6px 20px 0; position: static; }
-.note-body { flex: 1; overflow-y: auto; padding: 12px 28px 40vh; cursor: text; }
-.note-body .tiptap { min-height: 100%; }
+.editor-pane .toolbar { margin: 8px 12px 0; padding: 4px 6px; gap: 4px; position: static; }
+.editor-pane .toolbar .group { padding-right: 4px; }
+.editor-pane .toolbar-placeholder { height: 38px; box-sizing: border-box; }
+.note-body { flex: 1; overflow-y: auto; padding: 18px 28px 40vh; cursor: text; }
 
 /* ---------- Depth ---------- */
 /* The editor is a raised sheet of paper beside the left pane. */
@@ -317,12 +344,11 @@ button.primary {
   overflow: hidden;
 }
 .editor-pane.empty { background: var(--paper); }
-.note-header { border-bottom: 1px solid var(--border); box-shadow: 0 1px 0 var(--highlight); padding-bottom: 10px; }
 
 /* Raised controls: gradient face, faint top highlight, soft shadow; pressed state sinks. */
 .search-button,
-.note-props select,
-.note-props button,
+.note-footer select,
+.note-footer button,
 .trash-bar button {
   background: var(--raised);
   box-shadow: inset 0 1px 0 var(--highlight), var(--shadow-xs);
@@ -334,7 +360,7 @@ button.primary {
 }
 button.primary:active:not(:disabled),
 .search-button:active,
-.note-props button:active,
+.note-footer button:active,
 .trash-bar button:active {
   transform: translateY(1px);
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);

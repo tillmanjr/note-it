@@ -46,12 +46,16 @@ export function ConfirmButton({
   label,
   confirmLabel,
   title,
+  ariaLabel,
   onConfirm,
   className = '',
 }: {
   label: string
   confirmLabel: string
-  title: string
+  /** Native tooltip; omit when the button is wrapped in a Tooltip. */
+  title?: string
+  /** Accessible name when there's no title. */
+  ariaLabel?: string
   onConfirm: () => void
   className?: string
 }) {
@@ -65,6 +69,7 @@ export function ConfirmButton({
     <button
       className={`${className} ${armed ? 'danger' : ''}`}
       title={title}
+      aria-label={ariaLabel}
       onClick={(e) => {
         e.stopPropagation()
         if (armed) {

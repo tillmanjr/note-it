@@ -7,6 +7,7 @@ import { isChangeOrigin, noteExtensions, SelectionFormatBar, Toolbar } from '@td
 import { TagPicker } from './TagPicker'
 import { ConfirmButton } from './controls'
 import { formatWhen } from './NoteList'
+import { Tooltip } from './Tooltip'
 
 const LOAD_ORIGIN = 'load'
 /** Updates synced from another device: already stored, so not saved again. */
@@ -161,36 +162,40 @@ export function NoteEditor({ store, note, notebooks, tags, onPatch, onTagsCreate
         )}
       </div>
       <footer className="note-footer">
-        <select
-          value={note.notebookId}
-          disabled={trashed}
-          title="Notebook"
-          onChange={async (e) => {
-            await store.moveNote(note.id, e.target.value)
-            onPatch({ notebookId: e.target.value, updatedAt: Date.now() })
-          }}
-        >
-          {notebooks.map((nb) => (
-            <option key={nb.id} value={nb.id}>
-              📒 {nb.name}
-            </option>
-          ))}
-        </select>
+        <Tooltip tip="Notebook" className="note-footer-notebook">
+          <select
+            value={note.notebookId}
+            disabled={trashed}
+            aria-label="Notebook"
+            onChange={async (e) => {
+              await store.moveNote(note.id, e.target.value)
+              onPatch({ notebookId: e.target.value, updatedAt: Date.now() })
+            }}
+          >
+            {notebooks.map((nb) => (
+              <option key={nb.id} value={nb.id}>
+                📒 {nb.name}
+              </option>
+            ))}
+          </select>
+        </Tooltip>
         {/* Floats: the notebook pins left and this pins right; tags flow between them and wrap below at full width. */}
         <span className="note-footer-end">
-          <span className="dates" title={`Created ${new Date(note.createdAt).toLocaleString()}`}>
-            Edited {formatWhen(note.updatedAt)}
-          </span>
+          <Tooltip tip={`Created ${new Date(note.createdAt).toLocaleString()}`} align="end">
+            <span className="dates">Edited {formatWhen(note.updatedAt)}</span>
+          </Tooltip>
           {!trashed && (
-            <ConfirmButton
-              label="🗑"
-              confirmLabel="Move to Trash?"
-              title="Move to Trash"
-              onConfirm={async () => {
-                await store.trashNote(note.id)
-                onRemoved()
-              }}
-            />
+            <Tooltip tip="Move to Trash" align="end">
+              <ConfirmButton
+                label="🗑"
+                confirmLabel="Move to Trash?"
+                ariaLabel="Move to Trash"
+                onConfirm={async () => {
+                  await store.trashNote(note.id)
+                  onRemoved()
+                }}
+              />
+            </Tooltip>
           )}
         </span>
         <TagPicker

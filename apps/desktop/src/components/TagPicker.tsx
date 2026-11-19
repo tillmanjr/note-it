@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { cleanTagName, tagPath, type Id, type NoteStore, type Tag } from '@tdjr/core'
+import { Tooltip } from './Tooltip'
 
 interface Props {
   store: NoteStore
@@ -12,8 +13,6 @@ interface Props {
 
 /** Most suggestions shown at once. */
 const MAX_SUGGESTIONS = 12
-/** Hover time before the input's hint appears. */
-const HINT_DELAY_MS = 500
 
 /** Splits typed text into path levels. A leading "#" is a prompt; each level is cleaned like any tag name. */
 function pathParts(path: string): string[] {
@@ -54,13 +53,6 @@ export function TagPicker({ store, tags, value, disabled, onChange }: Props) {
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(0)
   const input = useRef<HTMLInputElement>(null)
-  const [hint, setHint] = useState(false)
-  const hintTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
-  const hideHint = () => {
-    clearTimeout(hintTimer.current)
-    setHint(false)
-  }
-  useEffect(() => () => clearTimeout(hintTimer.current), [])
 
   const paths = useMemo(() => {
     const children = new Map<Id, number>()
@@ -117,24 +109,26 @@ export function TagPicker({ store, tags, value, disabled, onChange }: Props) {
   return (
     <div className="tag-picker">
       {value.map((id) => (
-        <span key={id} className="tag-chip" title={pathOf(id)}>
+        <span key={id} className="tag-chip">
           # {pathOf(id)}
           {!disabled && (
-            <button title="Remove tag" onClick={() => onChange(value.filter((v) => v !== id), false)}>
-              ×
-            </button>
+            <Tooltip tip="Remove tag">
+              <button aria-label="Remove tag" onClick={() => onChange(value.filter((v) => v !== id), false)}>
+                ×
+              </button>
+            </Tooltip>
           )}
         </span>
       ))}
       {!disabled && (
-        <div
+        <Tooltip
           className="tag-combo"
-          onMouseEnter={() => {
-            clearTimeout(hintTimer.current)
-            hintTimer.current = setTimeout(() => setHint(true), HINT_DELAY_MS)
-          }}
-          onMouseLeave={hideHint}
-          onMouseDown={hideHint}
+          disabled={open && suggestions.length > 0}
+          tip={
+            <>
+              Type <b>a/b</b> to add sub-tag <b>b</b> under <b>a</b>
+            </>
+          }
         >
           <input
             ref={input}
@@ -147,7 +141,6 @@ export function TagPicker({ store, tags, value, disabled, onChange }: Props) {
             onFocus={() => setOpen(true)}
             onBlur={() => setOpen(false)}
             onChange={(e) => {
-              hideHint()
               setDraft(e.target.value)
               setActive(0)
               setOpen(true)
@@ -170,11 +163,6 @@ export function TagPicker({ store, tags, value, disabled, onChange }: Props) {
               }
             }}
           />
-          {hint && !(open && suggestions.length > 0) && (
-            <span className="tag-hint" role="tooltip">
-              Type <b>a/b</b> to add sub-tag <b>b</b> under <b>a</b>
-            </span>
-          )}
           {open && suggestions.length > 0 && (
             <ul className="tag-suggestions" role="listbox">
               {suggestions.map((s, i) => (
@@ -211,7 +199,7 @@ export function TagPicker({ store, tags, value, disabled, onChange }: Props) {
               ))}
             </ul>
           )}
-        </div>
+        </Tooltip>
       )}
     </div>
   )

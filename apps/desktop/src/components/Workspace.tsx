@@ -8,6 +8,29 @@ import { NotesAboveEditor, NotesSection, useNotesPlacement } from './NotesSectio
 import { AddDeviceDialog, ConnectDialog, DevicesDialog } from './SyncDialogs'
 import { useSync } from '../sync'
 
+const LAST_NOTE_KEY = 'tdjr.lastNoteByView'
+
+/** Views that remember their last opened note. Trash doesn't: nothing opens there by itself. */
+function rememberKey(view: View): string | null {
+  switch (view.kind) {
+    case 'all':
+      return 'all'
+    case 'notebook':
+    case 'tag':
+      return `${view.kind}:${view.id}`
+    case 'trash':
+      return null
+  }
+}
+
+function loadLastNotes(): Record<string, Id> {
+  try {
+    return JSON.parse(localStorage.getItem(LAST_NOTE_KEY) ?? '{}') as Record<string, Id>
+  } catch {
+    return {}
+  }
+}
+
 // Two panes: left (notebooks, tags, notes, trash) and the editor. The notes list can instead sit above the
 // editor. Search is an overlay.
 export function Workspace({ store }: { store: NoteStore }) {
@@ -38,15 +61,53 @@ export function Workspace({ store }: { store: NoteStore }) {
       sort,
     })
     setNotes(result)
+    return result
   }, [store, view, sort])
 
   useEffect(() => {
     void refreshOrganization()
   }, [refreshOrganization])
 
+  // The last note opened in each notebook, tag and All notes; switching to one reopens it.
+  const lastNotes = useRef<Record<string, Id>>(loadLastNotes())
+  const notesRef = useRef(notes)
+  notesRef.current = notes
+  const viewRef = useRef(view)
+  viewRef.current = view
+  /** Bumped by every explicit open, so a slower automatic pick never overrides it. */
+  const openSeq = useRef(0)
+  const loadedView = useRef<string | null>(null)
+
+  const showNote = useCallback(
+    async (id: Id) => {
+      const key = rememberKey(viewRef.current)
+      if (key && notesRef.current.some((n) => n.id === id) && lastNotes.current[key] !== id) {
+        lastNotes.current = { ...lastNotes.current, [key]: id }
+        try {
+          localStorage.setItem(LAST_NOTE_KEY, JSON.stringify(lastNotes.current))
+        } catch {
+          // Not remembered across restarts; still works for this session.
+        }
+      }
+      setCurrent(await store.getNote(id))
+    },
+    [store],
+  )
+
   useEffect(() => {
-    void refreshNotes()
-  }, [refreshNotes])
+    const key = view.kind === 'notebook' || view.kind === 'tag' ? `${view.kind}:${view.id}` : view.kind
+    const switched = loadedView.current !== key
+    loadedView.current = key
+    const seq = openSeq.current
+    void refreshNotes().then((list) => {
+      const remember = rememberKey(view)
+      if (!switched || !remember || seq !== openSeq.current) return
+      const last = lastNotes.current[remember]
+      const pick = list.find((n) => n.id === last) ?? list[0]
+      if (pick) void showNote(pick.id)
+      else setCurrent(null)
+    })
+  }, [refreshNotes, view, showNote])
 
   // Changes from other devices: refresh the lists and the open note's details (its body updates itself).
   const currentId = useRef<Id | null>(null)
@@ -67,9 +128,10 @@ export function Workspace({ store }: { store: NoteStore }) {
 
   const openNote = useCallback(
     async (id: Id) => {
-      setCurrent(await store.getNote(id))
+      openSeq.current++
+      await showNote(id)
     },
-    [store],
+    [showNote],
   )
 
   const newNote = useCallback(async () => {

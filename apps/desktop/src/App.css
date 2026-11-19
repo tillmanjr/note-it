@@ -581,3 +581,24 @@ button.primary.danger { background: var(--danger); border-color: var(--danger); 
 .device-seen { font-size: 12px; color: var(--muted); }
 .device-list button { border: 1px solid var(--border); background: var(--raised); border-radius: 6px; padding: 2px 10px; cursor: pointer; }
 .device-list button.danger { border-color: var(--danger); color: var(--danger); }
+
+/* ---------- Hover: anything that can be invoked changes slightly under the pointer ---------- */
+/* Informational text (edited time, counts) stays still, so a change on hover always means "clickable". */
+.note-footer button:hover:not(:disabled),
+.note-footer select:hover:not(:disabled),
+.trash-bar button:hover,
+.dialog footer button:not(.primary):hover:not(:disabled),
+.device-list button:hover,
+.search-button:hover {
+  background: var(--hover);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  color: var(--text);
+}
+.note-footer button.danger:hover,
+.trash-bar button.danger:hover,
+.device-list button.danger:hover { border-color: var(--danger); color: var(--danger); }
+.search-scope button:hover:not(.active) { border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); color: var(--text); }
+button.primary:hover:not(:disabled) { filter: brightness(1.08); }
+.tag-chip button:hover { color: var(--text); background: color-mix(in srgb, var(--text) 14%, transparent); border-radius: 50%; }
+.note-footer select:not(:disabled) { cursor: pointer; }
+.note-footer .tag-picker input:hover::placeholder { color: var(--text); }

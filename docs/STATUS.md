@@ -1,6 +1,6 @@
 # Where we are
 
-Checkpoint: 2026-11-18.
+Checkpoint: 2026-11-19.
 
 ## Done
 - **Milestone 1:** editor spike (`spike/editor`, frozen). See [editor-spike.md](editor-spike.md).
@@ -27,6 +27,14 @@ Checkpoint: 2026-11-18.
   - Checked in the browser against a scratch server: connect, Add a device, Devices, a live edit appearing in the open note, and disconnect.
   - The user's real notes are connected and syncing to the local server (2026-11-18).
 - **Since 2c-1:** tag picker dropdown (picks tags by id), tag names drop a leading "+" and surrounding whitespace, an always-visible sync status in the app bar, and the project's own ports (5318 desktop, 5319 sync, 5320 Postgres).
+- **UI streamlining (2026-11-19):**
+  - Switching notebook, tag or All notes reopens the last note opened there (else the first).
+  - Editor pane: the title is the note's first line; a one-row toolbar (text style first, Aa for font and size, color, highlight and list dropdowns); notebook, tags, edited time and trash sit in a strip fixed to the bottom (notebook left, time and trash right, tags wrap between and below).
+  - Note counts beside notebooks, tags (sub-tags included) and All notes.
+  - Notebooks and Tags open as an accordion.
+  - Dropdown lists follow the theme; a delayed Tooltip component replaces native tooltips in the note footer; every clickable control reacts to hover.
+- **Repo:** pushed to https://github.com/tillmanjr/note-it on 2026-11-19. From then on, work goes on branches and PRs (the user opens PRs from the push link; git CLI, no gh).
+- **Droplet spec:** [recommended-droplet.md](recommended-droplet.md).
 
 Details are in [milestone-2.md](milestone-2.md); the overall plan is in [design.md](design.md).
 

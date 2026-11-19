@@ -21,8 +21,8 @@ import { buildApp } from './app'
 import { SETUP_CODE_TTL_MS, createEnrollCode } from './auth'
 import { createPool, migrate } from './db'
 
-const ADMIN_URL = process.env.TEST_ADMIN_DATABASE_URL ?? 'postgres://notes:notes@localhost:55432/notes'
-const TEST_URL = process.env.TEST_DATABASE_URL ?? 'postgres://notes:notes@localhost:55432/notes_test'
+const ADMIN_URL = process.env.TEST_ADMIN_DATABASE_URL ?? 'postgres://notes:notes@localhost:5320/notes'
+const TEST_URL = process.env.TEST_DATABASE_URL ?? 'postgres://notes:notes@localhost:5320/notes_test'
 
 async function prepareDatabase(): Promise<boolean> {
   const admin = new pg.Client({ connectionString: ADMIN_URL, connectionTimeoutMillis: 2000 })

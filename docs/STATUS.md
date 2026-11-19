@@ -52,7 +52,7 @@ Details are in [milestone-2.md](milestone-2.md); the overall plan is in [design.
 - `npm install`, then `npm run desktop` starts the Tauri app (Vite on port 5318).
 - `npm run dev -w @tdjr/desktop` serves the same UI in a browser.
 - `npm test` and `npm run typecheck` check the code. The server's end-to-end tests need `npm run db:up -w @tdjr/server`; they're skipped otherwise.
-- Sync server: `npm run db:up -w @tdjr/server` (Postgres on 127.0.0.1:55432), then `npm run server` (http://localhost:8787, prints a setup code).
+- Sync server: `npm run db:up -w @tdjr/server` (Postgres on 127.0.0.1:5320), then `npm run server` (http://localhost:5319, prints a setup code).
 - **Don't add vitest or `@tdjr/core` to `apps/server/package.json`.** npm 11 then drops rolldown's native bindings from the lockfile and breaks Vite and Vitest. The server uses the root vitest and the workspace link instead.
 - **Real-export check** (git-ignored, prints counts only):
   - Run from `packages/enex`: `ENEX_DIR=../../../evernoteExports2026.11.17 npx vitest run real-exports --disableConsoleIntercept`.

@@ -27,8 +27,8 @@ Decided with the user on 2026-11-18. Builds on [design.md](design.md) and [miles
 
 ## Running locally
 
-1. `npm run db:up -w @tdjr/server` starts Postgres in Docker on `127.0.0.1:55432` (5433 is taken by WSL on this machine).
-2. `npm run server` starts the sync server on `http://localhost:8787` and prints a setup code.
+1. `npm run db:up -w @tdjr/server` starts Postgres in Docker on `127.0.0.1:5320` (this project's ports: 5318 desktop dev, 5319 sync server, 5320 Postgres).
+2. `npm run server` starts the sync server on `http://localhost:5319` and prints a setup code.
 3. In the app: ⚙ → Connect to server…, then enter the address and the code.
 
 `npm test` runs the end-to-end tests in `apps/server` against a `notes_test` database. They are skipped when Postgres isn't running.

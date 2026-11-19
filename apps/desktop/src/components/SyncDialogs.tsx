@@ -4,7 +4,7 @@ import type { DeviceCode, DeviceInfo, SyncClient } from '@tdjr/core'
 import { runningInTauri } from '../platform'
 import { formatWhen } from './NoteList'
 
-const DEFAULT_SERVER = 'http://localhost:8787'
+const DEFAULT_SERVER = 'http://localhost:5319'
 
 const errorText = (e: unknown) =>
   e instanceof TypeError ? 'Can’t reach the server. Check the address and that the server is running.' : e instanceof Error ? e.message : String(e)

@@ -7,16 +7,16 @@ import { createPool, migrate } from './db'
 //   npm run setup-code -w @tdjr/server   print a fresh setup code, e.g. after losing every device
 //
 // Settings come from the environment:
-//   DATABASE_URL   postgres://notes:notes@localhost:55432/notes (the docker-compose database)
-//   HOST, PORT     127.0.0.1, 8787
+//   DATABASE_URL   postgres://notes:notes@localhost:5320/notes (the docker-compose database)
+//   HOST, PORT     127.0.0.1, 5319
 //   BLOB_DIR       ./data/blobs
 //   CORS_ORIGINS   comma-separated origins allowed to call the API (the desktop app's by default)
 
 const env = process.env
 const config = {
-  databaseUrl: env.DATABASE_URL ?? 'postgres://notes:notes@localhost:55432/notes',
+  databaseUrl: env.DATABASE_URL ?? 'postgres://notes:notes@localhost:5320/notes',
   host: env.HOST ?? '127.0.0.1',
-  port: Number(env.PORT ?? 8787),
+  port: Number(env.PORT ?? 5319),
   blobDir: env.BLOB_DIR ?? './data/blobs',
   corsOrigins: (env.CORS_ORIGINS ?? 'http://localhost:5318,http://tauri.localhost,tauri://localhost')
     .split(',')

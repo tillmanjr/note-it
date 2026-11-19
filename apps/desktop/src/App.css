@@ -240,21 +240,23 @@ button.primary {
 /* Notebook, tags, edited time and trash: a strip fixed to the bottom of the note. */
 .note-footer {
   flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  min-height: 34px;
+  display: flow-root;
   padding: 4px 12px;
+  line-height: 26px;
   border-top: 1px solid var(--border);
   background: var(--raised);
   color: var(--muted);
   font-size: 12px;
 }
 .note-footer select { border: 1px solid var(--border); border-radius: 6px; background: var(--bg); padding: 1px 6px; font-size: 12px; color: var(--text); }
-.note-footer button { padding: 1px 8px; }
-.note-footer .spacer { flex: 1; }
-.note-footer .tag-chip { font-size: 11.5px; }
+.note-footer button { padding: 1px 8px; line-height: normal; }
+/* Notebook pins left, edited time and trash pin right; tags flow between and wrap below at full width.
+   The picker stays within one line so the second row starts at the left edge. */
+.note-footer > select { float: left; height: 22px; margin: 2px 10px 0 0; }
+.note-footer-end { float: right; display: flex; align-items: center; gap: 10px; margin-left: 10px; height: 26px; }
+.note-footer .tag-picker { display: inline; }
+.note-footer .tag-chip { font-size: 11.5px; line-height: 18px; margin: 0 4px 0 0; vertical-align: middle; }
+.note-footer .tag-combo { display: inline-block; vertical-align: middle; }
 .note-footer .tag-picker input { min-width: 150px; font-size: 12px; }
 /* At the bottom of the window, tag suggestions open upward. */
 .note-footer .tag-suggestions { top: auto; bottom: calc(100% + 4px); }

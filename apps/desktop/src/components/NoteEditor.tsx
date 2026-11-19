@@ -176,6 +176,23 @@ export function NoteEditor({ store, note, notebooks, tags, onPatch, onTagsCreate
             </option>
           ))}
         </select>
+        {/* Floats: the notebook pins left and this pins right; tags flow between them and wrap below at full width. */}
+        <span className="note-footer-end">
+          <span className="dates" title={`Created ${new Date(note.createdAt).toLocaleString()}`}>
+            Edited {formatWhen(note.updatedAt)}
+          </span>
+          {!trashed && (
+            <ConfirmButton
+              label="🗑"
+              confirmLabel="Move to Trash?"
+              title="Move to Trash"
+              onConfirm={async () => {
+                await store.trashNote(note.id)
+                onRemoved()
+              }}
+            />
+          )}
+        </span>
         <TagPicker
           store={store}
           tags={tags}
@@ -187,21 +204,6 @@ export function NoteEditor({ store, note, notebooks, tags, onPatch, onTagsCreate
             if (created) await onTagsCreated()
           }}
         />
-        <span className="spacer" />
-        <span className="dates" title={`Created ${new Date(note.createdAt).toLocaleString()}`}>
-          Edited {formatWhen(note.updatedAt)}
-        </span>
-        {!trashed && (
-          <ConfirmButton
-            label="🗑"
-            confirmLabel="Move to Trash?"
-            title="Move to Trash"
-            onConfirm={async () => {
-              await store.trashNote(note.id)
-              onRemoved()
-            }}
-          />
-        )}
       </footer>
     </div>
   )

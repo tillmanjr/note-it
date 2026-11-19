@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { buildTagTree, tagPath, type Id, type NoteMeta, type NoteSort, type NoteStore, type Notebook, type Tag, type TagNode } from '@tdjr/core'
 import { ConfirmButton, ConfirmDialog, InlineEdit } from './controls'
 import { SettingsMenu, SyncIndicator, type SyncMenu } from './SettingsMenu'
@@ -48,6 +48,22 @@ export function LeftPane({
   const selectedNotebook = view.kind === 'notebook' ? notebooks.find((n) => n.id === view.id)?.name : undefined
   const selectedTag = view.kind === 'tag' ? tagPath(tags, view.id) : undefined
   const clearSelection = () => onView({ kind: 'all' })
+  // Notebooks and Tags are an accordion: opening one closes the other, so neither gets squeezed.
+  const toggleOneOf = (id: 'notebooks' | 'tags') => {
+    const other = id === 'notebooks' ? 'tags' : 'notebooks'
+    if (sections.isCollapsed(id)) {
+      sections.expand(id)
+      sections.collapse(other)
+    } else {
+      sections.collapse(id)
+    }
+  }
+  // Both open (remembered from before the accordion): keep Notebooks.
+  const bothOpen = !sections.isCollapsed('notebooks') && !sections.isCollapsed('tags')
+  useEffect(() => {
+    if (bothOpen) sections.collapse('tags')
+    // sections is a fresh object each render; only the both-open state matters.
+  }, [bothOpen])
   // Opening a view is almost always to see its notes, so it expands the Notes section.
   const open = (v: View) => {
     sections.expand('notes')
@@ -182,7 +198,7 @@ export function LeftPane({
           className="notebooks"
           title={withSelection('Notebooks', selectedNotebook)}
           collapsed={sections.isCollapsed('notebooks')}
-          onToggle={() => sections.toggle('notebooks')}
+          onToggle={() => toggleOneOf('notebooks')}
           actions={<button title="New notebook" onClick={() => void addNotebook()}>＋</button>}
         >
           <ul>
@@ -230,7 +246,7 @@ export function LeftPane({
           className="tags"
           title={withSelection('Tags', selectedTag)}
           collapsed={sections.isCollapsed('tags')}
-          onToggle={() => sections.toggle('tags')}
+          onToggle={() => toggleOneOf('tags')}
           actions={<button title="New tag" onClick={() => void addTag(null)}>＋</button>}
         >
           <ul>{tree.map((n) => renderTag(n, 0))}</ul>

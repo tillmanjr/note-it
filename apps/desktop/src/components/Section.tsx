@@ -30,6 +30,7 @@ export function useCollapsedSections() {
     isCollapsed: (id: string) => collapsed.has(id),
     toggle: (id: string) => set(id, collapsed.has(id)),
     expand: (id: string) => set(id, true),
+    collapse: (id: string) => set(id, false),
   }
 }
 

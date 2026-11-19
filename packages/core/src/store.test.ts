@@ -136,6 +136,16 @@ describe('hierarchical tags', () => {
     expect(await store.listTags()).toEqual([])
     expect((await store.getNote(n.id))?.tagIds).toEqual([])
   })
+
+  it('drops a leading "+" and surrounding whitespace from tag names', async () => {
+    const a = await store.createTag('  +projects \t')
+    expect(a.name).toBe('projects')
+    expect((await store.createTag('+ house', a.id)).name).toBe('house')
+    expect((await store.findOrCreateTag('+Projects')).id).toBe(a.id)
+    await store.renameTag(a.id, '\n++work ')
+    expect((await store.listTags()).find((t) => t.id === a.id)?.name).toBe('work')
+    expect((await store.createTag('a+b+')).name).toBe('a+b+')
+  })
 })
 
 describe('full-text search', () => {

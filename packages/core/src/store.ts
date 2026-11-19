@@ -5,7 +5,7 @@ import { fromBase64, sha256Hex, toBase64 } from './encoding'
 import { SyncLedger } from './ledger'
 import type { Attachment, Id, NoteMeta, NoteQuery, Notebook, Tag } from './model'
 import { MIGRATIONS } from './schema'
-import { descendantTagIds, wouldCreateCycle } from './tagTree'
+import { cleanTagName, descendantTagIds, wouldCreateCycle } from './tagTree'
 
 /** Minimal SQL access implemented per platform (Tauri plugin-sql, Capacitor SQLite, node:sqlite in tests). */
 export interface SqlDriver {
@@ -172,7 +172,7 @@ export class NoteStore {
 
   async createTag(name: string, parentId: Id | null = null): Promise<Tag> {
     const t = this.now()
-    const tag: Tag = { id: ulid(), parentId, name: name.trim() || 'tag', createdAt: t, updatedAt: t, deletedAt: null }
+    const tag: Tag = { id: ulid(), parentId, name: cleanTagName(name) || 'tag', createdAt: t, updatedAt: t, deletedAt: null }
     await this.db.execute('INSERT INTO tag (id, parent_id, name, created_at, updated_at) VALUES (?, ?, ?, ?, ?)', [
       tag.id, parentId, tag.name, t, t,
     ])
@@ -181,7 +181,7 @@ export class NoteStore {
   }
 
   async renameTag(id: Id, name: string): Promise<void> {
-    await this.db.execute('UPDATE tag SET name = ?, updated_at = ? WHERE id = ?', [name.trim() || 'tag', this.now(), id])
+    await this.db.execute('UPDATE tag SET name = ?, updated_at = ? WHERE id = ?', [cleanTagName(name) || 'tag', this.now(), id])
     await this.ledger.track('tag', id, ['name', 'updated_at'])
   }
 
@@ -367,7 +367,7 @@ export class NoteStore {
   /** Live tag with this name under `parentId` (case-insensitive), or a new one. */
   async findOrCreateTag(name: string, parentId: Id | null = null): Promise<Tag> {
     const existing = (await this.listTags()).find(
-      (t) => t.parentId === parentId && t.name.localeCompare(name, undefined, { sensitivity: 'base' }) === 0,
+      (t) => t.parentId === parentId && t.name.localeCompare(cleanTagName(name), undefined, { sensitivity: 'base' }) === 0,
     )
     return existing ?? this.createTag(name, parentId)
   }

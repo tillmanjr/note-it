@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
-import { tagPath, type Id, type NoteStore, type Tag } from '@tdjr/core'
+import { cleanTagName, tagPath, type Id, type NoteStore, type Tag } from '@tdjr/core'
 
 interface Props {
   store: NoteStore
@@ -13,12 +13,12 @@ interface Props {
 /** Most suggestions shown at once. */
 const MAX_SUGGESTIONS = 12
 
-/** Splits typed text into path levels. Leading "#" or "+" are prompts, not part of a name. */
+/** Splits typed text into path levels. A leading "#" is a prompt; each level is cleaned like any tag name. */
 function pathParts(path: string): string[] {
   return path
-    .replace(/^[\s#+]+/, '')
+    .replace(/^[\s#]+/, '')
     .split('/')
-    .map((p) => p.trim())
+    .map(cleanTagName)
     .filter(Boolean)
 }
 

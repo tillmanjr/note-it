@@ -7,7 +7,12 @@ export interface TagNode {
   children: TagNode[]
 }
 
-const byName = (a: TagNode, b: TagNode) => a.tag.name.localeCompare(b.tag.name, undefined, { sensitivity: 'base' })
+/** A tag name as stored: leading "+" and surrounding whitespace are dropped, silently. Empty if nothing is left. */
+export function cleanTagName(name: string): string {
+  return name.replace(/^[\s+]+/, '').trim()
+}
+
+const byName =(a: TagNode, b: TagNode) => a.tag.name.localeCompare(b.tag.name, undefined, { sensitivity: 'base' })
 
 /** Live tags as a sorted forest. Tags whose parent is missing or deleted become roots. */
 export function buildTagTree(tags: Tag[]): TagNode[] {

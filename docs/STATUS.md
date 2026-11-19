@@ -25,7 +25,8 @@ Checkpoint: 2026-11-18.
 - **2c-1 sync (2026-11-18):** Fastify + Postgres server in `apps/server`, per-field last-writer-wins metadata, Yjs bodies, attachments, a live WebSocket nudge, and device codes. Design and how to run it are in [sync.md](sync.md).
   - End-to-end tests pass against real Postgres: first sync, merging, delete forever, live nudge, and revoke.
   - Checked in the browser against a scratch server: connect, Add a device, Devices, a live edit appearing in the open note, and disconnect.
-  - The user's real notes are not connected yet.
+  - The user's real notes are connected and syncing to the local server (2026-11-18).
+- **Since 2c-1:** tag picker dropdown (picks tags by id), tag names drop a leading "+" and surrounding whitespace, an always-visible sync status in the app bar, and the project's own ports (5318 desktop, 5319 sync, 5320 Postgres).
 
 Details are in [milestone-2.md](milestone-2.md); the overall plan is in [design.md](design.md).
 
@@ -42,11 +43,15 @@ Details are in [milestone-2.md](milestone-2.md); the overall plan is in [design.
   - **Backlog:** breadcrumbs (something like them), e.g. a trail showing where you are (notebook → note) and where you came from, to step back. Shape not yet decided.
 
 ## Next (not started; wait for the user's go-ahead)
-1. **Connect the real notes:** `npm run db:up -w @tdjr/server`, then `npm run server`, then ⚙ → Connect to server in the Tauri app.
-2. **2c-2:** passkeys (sign-in through the system browser), with the device token in the OS keychain.
-3. **Deploy** to the droplet. The user has the specs. Choose the domain first, because passkeys are tied to it. Caddy for TLS, nightly dumps.
-4. **2d:** vault-encrypted note sections (one passphrase, in memory only, re-lock on timeout), including converting Evernote-encrypted blocks.
-5. **Milestone 3:** mobile (Capacitor, iOS and Android).
+Now: more UI streamlining from the user.
+
+**On hold until the user has the droplet ready:**
+1. **2c-2:** passkeys (sign-in through the system browser), with the device token in the OS keychain.
+2. **Deploy** to the droplet. The user has the specs. Choose the domain first, because passkeys are tied to it. Caddy for TLS, nightly dumps.
+
+After that:
+3. **2d:** vault-encrypted note sections (one passphrase, in memory only, re-lock on timeout), including converting Evernote-encrypted blocks.
+4. **Milestone 3:** mobile (Capacitor, iOS and Android).
 
 ## How to run
 - `npm install`, then `npm run desktop` starts the Tauri app (Vite on port 5318).

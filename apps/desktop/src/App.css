@@ -479,10 +479,23 @@ button.primary.danger { background: var(--danger); border-color: var(--danger); 
 .menu-hint { margin-left: auto; font-size: 11px; color: var(--muted); }
 
 /* ---------- Sync ---------- */
-.settings-button { position: relative; }
-/* A small dot on the gear when sync needs attention (offline or stopped). */
-.sync-dot { position: absolute; top: 3px; right: 3px; width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
-.sync-dot.error { background: var(--danger); }
+/* Sync state in the app bar: quiet when fine, coloured when it needs attention. */
+.left-pane button.sync-indicator {
+  height: 24px;
+  padding: 0 8px;
+  margin-right: 2px;
+  border-radius: 12px;
+  font-size: 11.5px;
+  white-space: nowrap;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.sync-indicator .sync-icon { display: inline-block; width: 12px; text-align: center; }
+.left-pane button.sync-indicator.idle .sync-icon { color: var(--accent); }
+.left-pane button.sync-indicator.syncing .sync-icon { animation: sync-pulse 1s ease-in-out infinite; }
+.left-pane button.sync-indicator.error { color: var(--danger); }
+.left-pane button.sync-indicator.offline .sync-icon { color: var(--danger); }
+@keyframes sync-pulse { 50% { opacity: 0.3; } }
 .left-pane button.menu-item.sync-state.offline { color: var(--muted); }
 .left-pane button.menu-item.sync-state.error { color: var(--danger); }
 .menu-note { padding: 2px 8px 6px 32px; font-size: 11.5px; line-height: 1.4; color: var(--muted); }

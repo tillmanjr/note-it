@@ -32,6 +32,38 @@ function syncLabel(s: SyncStatus): string {
   }
 }
 
+/** Short form for the app bar. */
+function syncShort(s: SyncStatus): string {
+  switch (s.state) {
+    case 'syncing':
+      return 'Syncing…'
+    case 'offline':
+      return 'Offline'
+    case 'error':
+      return 'Sync stopped'
+    case 'idle':
+      return s.lastSyncAt ? `Synced ${formatWhen(s.lastSyncAt)}` : 'Waiting…'
+  }
+}
+
+/** Always-visible sync state beside the ⚙ button. Click: sync now, or connect when not set up. */
+export function SyncIndicator({ sync }: { sync: SyncMenu }) {
+  if (!sync.status) {
+    return (
+      <button className="sync-indicator off" title="This device isn't syncing. Click to connect to a server." onClick={sync.onConnect}>
+        <span className="sync-icon">⇅</span> Not syncing
+      </button>
+    )
+  }
+  const s = sync.status
+  return (
+    <button className={`sync-indicator ${s.state}`} title={`${s.error ?? syncLabel(s)}. Click to sync now.`} onClick={sync.onSyncNow}>
+      <span className="sync-icon">{s.state === 'idle' && s.lastSyncAt ? '✓' : s.state === 'offline' || s.state === 'error' ? '!' : '⇅'}</span>{' '}
+      {syncShort(s)}
+    </button>
+  )
+}
+
 /** The ⚙ button and its dropdown: app-level settings and actions. Escape or a click outside closes it. */
 export function SettingsMenu({
   theme,
@@ -72,9 +104,6 @@ export function SettingsMenu({
         onClick={() => setOpen((o) => !o)}
       >
         ⚙
-        {sync.status && sync.status.state !== 'idle' && sync.status.state !== 'syncing' && (
-          <span className={`sync-dot ${sync.status.state}`} aria-label={syncLabel(sync.status)} />
-        )}
       </button>
       {open && (
         <div className="settings-menu" role="menu">

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { buildTagTree, tagPath, type Id, type NoteMeta, type NoteSort, type NoteStore, type Notebook, type Tag, type TagNode } from '@tdjr/core'
 import { ConfirmButton, ConfirmDialog, InlineEdit } from './controls'
-import { SettingsMenu, type SyncMenu } from './SettingsMenu'
+import { SettingsMenu, SyncIndicator, type SyncMenu } from './SettingsMenu'
 import { useTheme } from '../theme'
 import { Logo } from './Logo'
 import { NotesSection, type NotesPlacement } from './NotesSection'
@@ -165,6 +165,7 @@ export function LeftPane({
     <nav className="left-pane">
       <header className="app-bar">
         <Logo />
+        <SyncIndicator sync={sync} />
         <SettingsMenu theme={theme} onTheme={setTheme} onImport={onImport} sync={sync} />
       </header>
       <div className="pane-top">

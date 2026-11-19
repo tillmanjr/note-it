@@ -99,6 +99,9 @@
 .left-pane .row:hover { background: var(--hover); }
 .left-pane .row.active { background: var(--active); }
 .left-pane .row .label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Note counts sit right after the name; the count absorbs the spare width so hover actions stay at the end. */
+.left-pane .row .label:has(+ .count) { flex: 0 1 auto; }
+.left-pane .row .count { flex: 1 0 auto; margin-left: 5px; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
 .left-pane .row-actions { display: none; }
 .left-pane .row:hover .row-actions, .left-pane .row-actions:has(.danger) { display: flex; }
 .left-pane .tags .row { position: relative; }

@@ -146,6 +146,26 @@ describe('hierarchical tags', () => {
     expect((await store.listTags()).find((t) => t.id === a.id)?.name).toBe('work')
     expect((await store.createTag('a+b+')).name).toBe('a+b+')
   })
+
+  it('counts live notes per notebook and per tag, sub-tags included and each note once', async () => {
+    const a = await store.createNotebook('A')
+    const b = await store.createNotebook('B')
+    const home = await store.createTag('home')
+    const garden = await store.createTag('garden', home.id)
+    const n1 = await store.createNote(a.id, '1')
+    const n2 = await store.createNote(a.id, '2')
+    const n3 = await store.createNote(b.id, '3')
+    await store.setNoteTags(n1.id, [home.id, garden.id])
+    await store.setNoteTags(n2.id, [garden.id])
+    await store.setNoteTags(n3.id, [garden.id])
+    await store.trashNote(n3.id)
+    const counts = await store.noteCounts()
+    expect(counts.all).toBe((await store.queryNotes()).length)
+    expect(counts.notebooks[a.id]).toBe(2)
+    expect(counts.notebooks[b.id]).toBeUndefined()
+    expect(counts.tags).toMatchObject({ [home.id]: 2, [garden.id]: 2 })
+    expect(counts.tags[home.id]).toBe((await store.queryNotes({ tagId: home.id })).length)
+  })
 })
 
 describe('full-text search', () => {

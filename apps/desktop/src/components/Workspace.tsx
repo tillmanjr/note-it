@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { Id, NoteMeta, NoteSort, NoteStore, Notebook, Tag } from '@tdjr/core'
+import type { Id, NoteCounts, NoteMeta, NoteSort, NoteStore, Notebook, Tag } from '@tdjr/core'
 import { LeftPane, type View } from './LeftPane'
 import { NoteEditor } from './NoteEditor'
 import { SearchOverlay, type SearchScope } from './SearchOverlay'
@@ -39,6 +39,7 @@ export function Workspace({ store }: { store: NoteStore }) {
   const [view, setView] = useState<View>({ kind: 'all' })
   const [sort, setSort] = useState<NoteSort>('updated')
   const [notes, setNotes] = useState<NoteMeta[]>([])
+  const [counts, setCounts] = useState<NoteCounts>({ all: 0, notebooks: {}, tags: {} })
   // The open note is tracked separately from the list: a search result may be outside the current view.
   const [current, setCurrent] = useState<NoteMeta | null>(null)
   const [searchOpen, setSearchOpen] = useState(false)
@@ -47,11 +48,15 @@ export function Workspace({ store }: { store: NoteStore }) {
   const sync = useSync(store)
   const [syncDialog, setSyncDialog] = useState<'connect' | 'add' | 'devices' | null>(null)
 
+  // Note counts beside notebooks and tags; refreshed whenever notes or the organization change.
+  const refreshCounts = useCallback(async () => setCounts(await store.noteCounts()), [store])
+
   const refreshOrganization = useCallback(async () => {
     const [nbs, ts] = await Promise.all([store.listNotebooks(), store.listTags()])
     setNotebooks(nbs)
     setTags(ts)
-  }, [store])
+    void refreshCounts()
+  }, [store, refreshCounts])
 
   const refreshNotes = useCallback(async () => {
     const result = await store.queryNotes({
@@ -61,8 +66,9 @@ export function Workspace({ store }: { store: NoteStore }) {
       sort,
     })
     setNotes(result)
+    void refreshCounts()
     return result
-  }, [store, view, sort])
+  }, [store, view, sort, refreshCounts])
 
   useEffect(() => {
     void refreshOrganization()
@@ -153,8 +159,9 @@ export function Workspace({ store }: { store: NoteStore }) {
         return next
       })
       setCurrent((cur) => (cur && cur.id === id ? { ...cur, ...patch } : cur))
+      if (patch.notebookId || patch.tagIds) void refreshCounts()
     },
-    [sort],
+    [sort, refreshCounts],
   )
 
   const closeRemoved = useCallback(
@@ -213,6 +220,7 @@ export function Workspace({ store }: { store: NoteStore }) {
         view={view}
         viewTitle={title}
         notes={notes}
+        counts={counts}
         sort={sort}
         selectedId={current?.id ?? null}
         notesPlacement={notesPlacement}

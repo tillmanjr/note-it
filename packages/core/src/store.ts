@@ -3,7 +3,7 @@ import * as Y from 'yjs'
 import { snippetOf } from './bodyText'
 import { fromBase64, sha256Hex, toBase64 } from './encoding'
 import { SyncLedger } from './ledger'
-import type { Attachment, Id, NoteMeta, NoteQuery, Notebook, Tag } from './model'
+import type { Attachment, Id, NoteCounts, NoteMeta, NoteQuery, Notebook, Tag } from './model'
 import { MIGRATIONS } from './schema'
 import { cleanTagName, descendantTagIds, wouldCreateCycle } from './tagTree'
 
@@ -201,6 +201,41 @@ export class NoteStore {
     await this.db.execute(`UPDATE tag SET deleted_at = ?, updated_at = ? WHERE id IN (${marks})`, [t, t, ...ids])
     await this.ledger.track('note', noteIds, ['tags'])
     await this.ledger.track('tag', ids, ['deleted_at', 'updated_at'])
+  }
+
+  /**
+   * Live-note counts for the left pane. A tag counts notes tagged with it or any sub-tag (each note once),
+   * matching what filtering by that tag shows.
+   */
+  async noteCounts(): Promise<NoteCounts> {
+    const [byNotebook, tagged, tags] = await Promise.all([
+      this.db.select<{ id: string; n: number }>('SELECT notebook_id AS id, COUNT(*) AS n FROM note WHERE deleted_at IS NULL GROUP BY notebook_id'),
+      this.db.select<{ note_id: string; tag_id: string }>(
+        'SELECT nt.note_id, nt.tag_id FROM note_tag nt JOIN note n ON n.id = nt.note_id WHERE n.deleted_at IS NULL',
+      ),
+      this.listTags(),
+    ])
+    const parent = new Map(tags.map((t) => [t.id, t.parentId]))
+    const notesByTag = new Map<Id, Set<Id>>()
+    for (const { note_id, tag_id } of tagged) {
+      // Credit the tag and each ancestor; the set keeps a note tagged twice in one branch from counting twice.
+      const seen = new Set<Id>()
+      for (let id: Id | null | undefined = tag_id; id && parent.has(id) && !seen.has(id); id = parent.get(id)) {
+        seen.add(id)
+        let set = notesByTag.get(id)
+        if (!set) notesByTag.set(id, (set = new Set()))
+        set.add(note_id)
+      }
+    }
+    const notebooks: Record<Id, number> = {}
+    let all = 0
+    for (const r of byNotebook) {
+      notebooks[r.id] = Number(r.n)
+      all += Number(r.n)
+    }
+    const tagCounts: Record<Id, number> = {}
+    for (const [id, set] of notesByTag) tagCounts[id] = set.size
+    return { all, notebooks, tags: tagCounts }
   }
 
   // ---------- Notes ----------

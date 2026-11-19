@@ -44,6 +44,13 @@ export interface Attachment {
 
 export type NoteSort = 'updated' | 'created' | 'title'
 
+/** Live notes per notebook and per tag (tags include their sub-tags), and in all. */
+export interface NoteCounts {
+  all: number
+  notebooks: Record<Id, number>
+  tags: Record<Id, number>
+}
+
 export interface NoteQuery {
   notebookId?: Id
   /** Matches notes tagged with this tag or any descendant tag. */

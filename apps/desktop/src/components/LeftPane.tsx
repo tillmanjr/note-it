@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { buildTagTree, tagPath, type Id, type NoteMeta, type NoteSort, type NoteStore, type Notebook, type Tag, type TagNode } from '@tdjr/core'
+import { buildTagTree, tagPath, type Id, type NoteCounts, type NoteMeta, type NoteSort, type NoteStore, type Notebook, type Tag, type TagNode } from '@tdjr/core'
 import { ConfirmButton, ConfirmDialog, InlineEdit } from './controls'
 import { SettingsMenu, SyncIndicator, type SyncMenu } from './SettingsMenu'
 import { useTheme } from '../theme'
@@ -16,6 +16,7 @@ interface Props {
   view: View
   viewTitle: string
   notes: NoteMeta[]
+  counts: NoteCounts
   sort: NoteSort
   selectedId: Id | null
   notesPlacement: NotesPlacement
@@ -30,10 +31,15 @@ interface Props {
   onChanged: () => Promise<void>
 }
 
+/** A note count beside a notebook or tag. */
+function Count({ n = 0 }: { n?: number }) {
+  return <span className="count">({n})</span>
+}
+
 // Single left pane: app bar (⚙ menu), actions, then collapsible Notebooks / Tags / Notes sections, Trash pinned at the bottom.
 // Notes can instead sit above the editor (see NotesAboveEditor); then Notebooks and Tags share the pane.
 export function LeftPane({
-  store, notebooks, tags, view, viewTitle, notes, sort, selectedId, notesPlacement, onNotesPlacement,
+  store, notebooks, tags, view, viewTitle, notes, counts, sort, selectedId, notesPlacement, onNotesPlacement,
   onView, onSort, onSelect, onNew, onSearch, onImport, sync, onChanged,
 }: Props) {
   const [editing, setEditing] = useState<Id | null>(null)
@@ -158,6 +164,7 @@ export function LeftPane({
             }}
             onCancel={() => setEditing(null)}
           />
+          <Count n={counts.tags[tag.id]} />
           <span className="row-actions">
             <button title="New sub-tag" onClick={(e) => (e.stopPropagation(), void addTag(tag.id))}>＋</button>
             <button title="Rename" onClick={(e) => (e.stopPropagation(), setEditing(tag.id))}>✎</button>
@@ -205,6 +212,7 @@ export function LeftPane({
             <li>
               <div className={`row ${isActive({ kind: 'all' }) ? 'active' : ''}`} onClick={() => open({ kind: 'all' })}>
                 <span className="label">All notes</span>
+                <Count n={counts.all} />
               </div>
             </li>
             {notebooks.map((nb) => {
@@ -221,6 +229,7 @@ export function LeftPane({
                       }}
                       onCancel={() => setEditing(null)}
                     />
+                    <Count n={counts.notebooks[nb.id]} />
                     <span className="row-actions">
                       <button title="Rename" onClick={(e) => (e.stopPropagation(), setEditing(nb.id))}>✎</button>
                       {notebooks.length > 1 && (

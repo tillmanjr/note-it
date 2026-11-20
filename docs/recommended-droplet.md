@@ -25,7 +25,7 @@ The DigitalOcean droplet for the sync server (milestone 2c). Recommended on 2026
    - inbound 22 (SSH), ideally only from your home IP;
    - inbound 80 and 443 from anywhere, for HTTPS and certificate renewal;
    - nothing else. The sync server (5319) and Postgres (5320) are reached only from the droplet itself, never from outside.
-3. **Pick the domain now.** Passkeys (2c-2) are permanently tied to the domain they're created on, so choose the name you'll keep, e.g. `notes.yourdomain.com`. DNS can wait: later it gets an A record (and AAAA for IPv6) pointing at the reserved IP.
+3. **Domain: `notes.tillmanjr.com`** (chosen 2026-11-20; `tillmanjr.com` is registered at Cloudflare). Passkeys (2c-2) are permanently tied to it, so it stays. DNS can wait: later it gets an A record (and AAAA for IPv6) pointing at the reserved IP. In Cloudflare, set those records to **DNS only** (grey cloud), so Caddy can get its own certificate and sync's WebSocket goes straight to the droplet.
 4. **Don't install anything on it yet.** Deployment comes with a setup script, written once passkeys work locally.
 
 ## What the setup script will cover

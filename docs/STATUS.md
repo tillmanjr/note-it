@@ -55,7 +55,7 @@ Now: more UI streamlining from the user.
 
 **On hold until the user has the droplet ready:**
 1. **2c-2:** passkeys (sign-in through the system browser), with the device token in the OS keychain.
-2. **Deploy** to the droplet. The user has the specs. Choose the domain first, because passkeys are tied to it. Caddy for TLS, nightly dumps.
+2. **Deploy** to the droplet. The user has the specs. Domain: `notes.tillmanjr.com` (Cloudflare DNS, DNS-only records); passkeys are tied to it. Caddy for TLS, nightly dumps.
 
 After that:
 3. **2d:** vault-encrypted note sections (one passphrase, in memory only, re-lock on timeout), including converting Evernote-encrypted blocks.

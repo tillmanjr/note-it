@@ -23,7 +23,7 @@ PUBKEY=$(head -n1 "$PUBKEY_FILE")
 step "Updates"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -q
-apt-get -y -q -o Dpkg::Options::=--force-confold upgrade
+apt-get -y -q -o Dpkg::Options::=--force-confold full-upgrade
 apt-get -y -q install unattended-upgrades fail2ban python3-systemd ufw
 
 step "Automatic security updates (reboot at 04:30 if needed, after the backup window)"

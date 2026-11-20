@@ -35,6 +35,8 @@ Checkpoint: 2026-11-19.
   - Dropdown lists follow the theme; a delayed Tooltip component replaces native tooltips in the note footer; every clickable control reacts to hover.
 - **Repo:** pushed to https://github.com/tillmanjr/note-it on 2026-11-19. From then on, work goes on branches and PRs (the user opens PRs from the push link; git CLI, no gh).
 - **Droplet spec:** [recommended-droplet.md](recommended-droplet.md).
+- **Droplet up and hardened (2026-11-20):** `tdjr-notes`, DNS for `notes.tillmanjr.com` in place, cloud firewall, `deploy/01-harden.sh` run and verified (only `tillman` with the `notes_droplet` key gets in; root refused; kernel 6.8.0-151). Details in [deploy.md](deploy.md). Nothing app-related is installed yet.
+- **Credentials:** be aggressively careful from here on; rules in [deploy.md](deploy.md#credentials).
 
 Details are in [milestone-2.md](milestone-2.md); the overall plan is in [design.md](design.md).
 
@@ -53,9 +55,9 @@ Details are in [milestone-2.md](milestone-2.md); the overall plan is in [design.
 ## Next (not started; wait for the user's go-ahead)
 Now: more UI streamlining from the user.
 
-**On hold until the user has the droplet ready:**
+**Droplet is ready; next, on the user's go-ahead:**
 1. **2c-2:** passkeys (sign-in through the system browser), with the device token in the OS keychain.
-2. **Deploy** to the droplet. The user has the specs. Domain: `notes.tillmanjr.com` (Cloudflare DNS, DNS-only records); passkeys are tied to it. Caddy for TLS, nightly dumps.
+2. **Deploy** to the droplet (next script: Docker or native services, Caddy, secrets generated on the droplet). Domain: `notes.tillmanjr.com` (Cloudflare DNS, DNS-only records); passkeys are tied to it. Caddy for TLS, nightly dumps.
 
 After that:
 3. **2d:** vault-encrypted note sections (one passphrase, in memory only, re-lock on timeout), including converting Evernote-encrypted blocks.

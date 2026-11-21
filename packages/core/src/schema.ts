@@ -72,4 +72,6 @@ export const MIGRATIONS: string[][] = [
     // Attachments known from other devices whose files haven't been downloaded yet.
     `CREATE TABLE blob_missing (hash TEXT PRIMARY KEY)`,
   ],
+  // 3: vault keys (docs/vault.md). `wrap` is JSON: the KDF settings and the vault key wrapped with the passphrase.
+  [`CREATE TABLE vault_key (id TEXT PRIMARY KEY, wrap TEXT NOT NULL, created_at INTEGER NOT NULL, deleted_at INTEGER)`],
 ]

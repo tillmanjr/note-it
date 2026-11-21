@@ -5,6 +5,7 @@ export { toBase64, fromBase64, sha256Hex } from './encoding'
 export { bodyText, snippetOf, BODY_FIELD } from './bodyText'
 export { Hlc } from './hlc'
 export * from './syncProtocol'
+export * from './vault'
 export {
   SyncClient,
   SyncHttpError,

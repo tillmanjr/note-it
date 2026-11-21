@@ -5,7 +5,7 @@
 // updates, which merge without conflicts. The server keeps one global change sequence; clients pull everything
 // after the cursor they last saw (excluding their own changes).
 
-export type RecordKind = 'notebook' | 'tag' | 'note' | 'attachment'
+export type RecordKind = 'notebook' | 'tag' | 'note' | 'attachment' | 'vault_key'
 
 /** The synced fields of each record kind. Notes also carry `tags` (tag ids) and `purged` (deleted forever). */
 export const SYNC_FIELDS: Record<RecordKind, readonly string[]> = {
@@ -13,6 +13,8 @@ export const SYNC_FIELDS: Record<RecordKind, readonly string[]> = {
   tag: ['parent_id', 'name', 'created_at', 'updated_at', 'deleted_at'],
   note: ['notebook_id', 'title', 'created_at', 'updated_at', 'deleted_at', 'tags', 'purged'],
   attachment: ['mime', 'size', 'filename', 'created_at'],
+  // `wrap` is one JSON value (KDF settings and the wrapped key together), so a merge can't mix two passphrases.
+  vault_key: ['wrap', 'created_at', 'deleted_at'],
 }
 
 export interface RecordChange {

@@ -12,10 +12,16 @@ import {
   NoteStore,
   SyncClient,
   SyncHttpError,
+  WrongPassphrase,
   accessState,
   bodyText,
+  changePassphrase,
+  createVault,
+  decryptSection,
+  encryptSection,
   requestAccess,
   signIn,
+  unlockVault,
   type BlobStore,
   type SqlDriver,
 } from '@tdjr/core'
@@ -174,6 +180,35 @@ describe.skipIf(!available)('sync server end to end', () => {
     expect((await b.store.searchNotes('eggs')).map((h) => h.note.id)).toEqual([note.id])
     expect(b.blobs.files.get(att.hash)).toEqual(new Uint8Array([1, 2, 3, 4]))
     expect((await approvedDevices(pool)).map((d) => d.name)).toEqual(['Desktop', 'Phone'])
+  })
+
+  it('syncs vault keys, including a passphrase change, without the server seeing the passphrase', async () => {
+    const fast = { alg: 'argon2id', m: 1024, t: 1, p: 1 } as const
+    const a = await newDevice()
+    const { record, keys } = await createVault('first passphrase', Date.now(), fast)
+    await a.store.saveVaultKey(record)
+    const section = await encryptSection(keys, record.id, [{ type: 'paragraph', content: [{ type: 'text', text: 'PIN 4417' }] }])
+    const { client: ca } = await connect(a, 'Desktop')
+    await ca.syncNow()
+
+    const b = await newDevice()
+    const { client: cb } = await connect(b, 'Phone')
+    await cb.syncNow()
+    const [copy] = await b.store.listVaultKeys()
+    expect(copy).toEqual(record)
+    expect(await decryptSection(await unlockVault('first passphrase', [copy]), section)).toBeTruthy()
+
+    const [rewrapped] = await changePassphrase('first passphrase', 'second passphrase', [copy], fast)
+    await b.store.saveVaultKey(rewrapped)
+    await cb.syncNow()
+    await ca.syncNow()
+    const [onA] = await a.store.listVaultKeys()
+    expect(onA.wrap).toEqual(rewrapped.wrap)
+    await expect(unlockVault('first passphrase', [onA])).rejects.toBeInstanceOf(WrongPassphrase)
+
+    const { rows } = await pool.query(`SELECT value::text AS v FROM record WHERE kind = 'vault_key'`)
+    expect(rows.length).toBeGreaterThan(0)
+    for (const r of rows) expect(r.v).not.toMatch(/passphrase|4417/)
   })
 
   it('merges offline edits to the same note; the newest title wins', async () => {

@@ -211,6 +211,13 @@ button.primary {
   background: var(--panel);
 }
 .trash-bar span { flex: 1; }
+.editor-notice {
+  padding: 6px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 12.5px;
+}
 .trash-bar button, .note-footer button {
   border: 1px solid var(--border);
   background: var(--bg);
@@ -559,6 +566,8 @@ button.primary.danger { background: var(--danger); border-color: var(--danger); 
 .sync-dialog-body > .hint { padding: 8px 0; font-size: 12.5px; line-height: 1.5; margin: 0; }
 .sync-dialog footer .error { color: var(--danger); font-size: 12.5px; }
 .form-fields { display: grid; gap: 10px; margin-top: 4px; }
+.form-fields label.checkbox { display: flex; align-items: flex-start; gap: 8px; font-weight: 400; color: var(--text); line-height: 1.45; }
+.form-fields label.checkbox input { margin-top: 3px; }
 .form-fields label { display: grid; gap: 4px; font-size: 12px; font-weight: 600; color: var(--muted); }
 .form-fields input { padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); font-size: 13.5px; font-weight: 400; color: var(--text); }
 .form-fields input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }

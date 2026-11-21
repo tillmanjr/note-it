@@ -43,6 +43,9 @@ Checkpoint: 2026-11-19.
 - **Deployed (2026-11-20):** sync server 0.1.0 runs on the droplet at https://notes.tillmanjr.com (native Postgres 16, Caddy, Node 24, sandboxed systemd service). Releases come from the Server release workflow and are installed with `sudo notes-deploy`. The desktop app is joined to it and synced. Nightly age-encrypted backups work, and `npm.cmd run backup:pull` copies them to `~/notes-backups`; decrypting with the PC's key was checked. Runbook in [deploy.md](deploy.md).
   - First-install fixes are on `fix/caddy-log-owner`: validating the Caddyfile as root made the log file root-owned; `backup:pull` used `sftp -b`, which can't ask for the key passphrase.
   - The dev build's Request access defaults to `http://localhost:5319`; type `https://notes.tillmanjr.com` to use the droplet. On this PC, use `npm.cmd` in Windows PowerShell 5.1 (its execution policy blocks `npm.ps1`).
+- **2d vault sections (2026-11-20, branch `feature/vault`):** select text → 🔒 encrypts it into a section. One passphrase (Argon2id) unwraps a random vault key, which is kept only in memory; it locks after 3 minutes idle, when the window is hidden, or with ⚙ → Lock vault. Change passphrase rewraps the key. Attachments can't go inside a section. The exports hold no Evernote-encrypted text, so there was nothing to convert. Design in [vault.md](vault.md).
+  - Tests: core crypto (wrong passphrase, tampering, rewrap, two keys) and vault keys syncing through the server. Checked in the browser build: set up, encrypt, edit, lock, wrong passphrase, unlock, reload, remove encryption. The auto-lock timer and Change passphrase dialog weren't clicked through yet.
+  - **The server must run 0.2.0 before a synced device uses the vault:** older servers reject the new `vault_key` records, which stops that device's sync.
 - **Credentials:** be aggressively careful from here on; rules in [deploy.md](deploy.md#credentials).
 
 Details are in [milestone-2.md](milestone-2.md); the overall plan is in [design.md](design.md).
@@ -63,8 +66,7 @@ Details are in [milestone-2.md](milestone-2.md); the overall plan is in [design.
 Now: more UI streamlining from the user.
 
 **Then, on the user's go-ahead:**
-1. **2d:** vault-encrypted note sections (one passphrase, in memory only, re-lock on timeout), including converting Evernote-encrypted blocks.
-2. **Milestone 3:** mobile (Capacitor, iOS and Android).
+1. **Milestone 3:** mobile (Capacitor, iOS and Android).
 
 ## How to run
 - Install gitleaks (`winget install Gitleaks.Gitleaks`); the pre-commit hook needs it.

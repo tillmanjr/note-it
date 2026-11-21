@@ -165,7 +165,12 @@ export async function finishRequest(
     requireUserVerification: true,
   }).catch(() => ({ verified: false as const }))
   if (!result.verified) return { refused: 'unknown', message: 'The passkey could not be verified. Request access again.' }
-  const { credential } = result.registrationInfo
+  const { credential, credentialDeviceType } = result.registrationInfo
+  // Device-bound only: the authenticator says the key can't be backed up or synced (a synced passkey could be on
+  // any device). This is checked here because the client can't be trusted to pick the authenticator.
+  if (credentialDeviceType !== 'singleDevice') {
+    return { refused: 'unknown', message: 'That passkey can be synced to other devices. Use this device’s Windows Hello instead.' }
+  }
   const code = matchCode(credential.id)
   await db.query(
     `UPDATE device SET status = 'pending', credential_id = $2, public_key = $3, sign_count = $4, transports = $5, match_code = $6

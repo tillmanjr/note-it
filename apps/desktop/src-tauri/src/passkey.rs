@@ -158,8 +158,9 @@ mod imp {
     let options = WEBAUTHN_AUTHENTICATOR_MAKE_CREDENTIAL_OPTIONS {
       dwVersion: OPTIONS_VERSION,
       dwTimeoutMilliseconds: o.timeout_ms,
-      // Windows Hello on this device only: the passkey never leaves it.
-      dwAuthenticatorAttachment: WEBAUTHN_AUTHENTICATOR_ATTACHMENT_PLATFORM,
+      // No attachment preference: some Windows builds reject PLATFORM as an invalid parameter. Windows offers
+      // Windows Hello first; the server refuses any passkey that could be synced off this device.
+      dwAuthenticatorAttachment: WEBAUTHN_AUTHENTICATOR_ATTACHMENT_ANY,
       dwUserVerificationRequirement: WEBAUTHN_USER_VERIFICATION_REQUIREMENT_REQUIRED,
       dwAttestationConveyancePreference: WEBAUTHN_ATTESTATION_CONVEYANCE_PREFERENCE_NONE,
       ..Default::default()
@@ -194,8 +195,9 @@ mod imp {
     let options = WEBAUTHN_AUTHENTICATOR_GET_ASSERTION_OPTIONS {
       dwVersion: OPTIONS_VERSION,
       dwTimeoutMilliseconds: o.timeout_ms,
+      // Only this device's passkey is allowed, so no attachment preference is needed (see create).
       CredentialList: WEBAUTHN_CREDENTIALS { cCredentials: creds.len() as u32, pCredentials: creds.as_mut_ptr() },
-      dwAuthenticatorAttachment: WEBAUTHN_AUTHENTICATOR_ATTACHMENT_PLATFORM,
+      dwAuthenticatorAttachment: WEBAUTHN_AUTHENTICATOR_ATTACHMENT_ANY,
       dwUserVerificationRequirement: WEBAUTHN_USER_VERIFICATION_REQUIREMENT_REQUIRED,
       ..Default::default()
     };

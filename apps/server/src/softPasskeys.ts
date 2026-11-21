@@ -10,9 +10,11 @@ const b64 = (bytes: Uint8Array) => Buffer.from(bytes).toString('base64url')
 
 const FLAG_UP = 0x01
 const FLAG_UV = 0x04
+/** Backup eligible and backed up: what a synced passkey reports. */
+const FLAG_SYNCED = 0x08 | 0x10
 const FLAG_AT = 0x40
 
-export function softPasskeys(): Passkeys & { keys: Map<string, KeyObject> } {
+export function softPasskeys({ synced = false } = {}): Passkeys & { keys: Map<string, KeyObject> } {
   const keys = new Map<string, KeyObject>()
   const counters = new Map<string, number>()
 
@@ -44,7 +46,7 @@ export function softPasskeys(): Passkeys & { keys: Map<string, KeyObject> } {
       idLength.writeUInt16BE(credentialId.length)
       const authData = Buffer.concat([
         sha256(options.rpId),
-        Buffer.from([FLAG_UP | FLAG_UV | FLAG_AT]),
+        Buffer.from([FLAG_UP | FLAG_UV | FLAG_AT | (synced ? FLAG_SYNCED : 0)]),
         counter(0),
         Buffer.alloc(16), // aaguid
         idLength,
@@ -72,7 +74,7 @@ export function softPasskeys(): Passkeys & { keys: Map<string, KeyObject> } {
       if (!credentialId) throw new Error('No passkey for this server on this device.')
       const count = (counters.get(credentialId) ?? 0) + 1
       counters.set(credentialId, count)
-      const authData = Buffer.concat([sha256(options.rpId), Buffer.from([FLAG_UP | FLAG_UV]), counter(count)])
+      const authData = Buffer.concat([sha256(options.rpId), Buffer.from([FLAG_UP | FLAG_UV | (synced ? FLAG_SYNCED : 0)]), counter(count)])
       const data = clientData('webauthn.get', options.challenge, origin)
       const signature = createSign('sha256').update(Buffer.concat([authData, sha256(data)])).sign(keys.get(credentialId)!)
       return {

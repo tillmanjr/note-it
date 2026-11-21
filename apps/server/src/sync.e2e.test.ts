@@ -21,7 +21,7 @@ import {
 } from '@tdjr/core'
 import { buildApp } from './app'
 import { createPool, migrate } from './db'
-import { approvedDevices, decideRequest, revokeDevice, type PasskeyConfig } from './passkey'
+import { approvedDevices, decideRequest, pendingRequests, revokeDevice, type PasskeyConfig } from './passkey'
 import { softPasskeys } from './softPasskeys'
 
 const ADMIN_URL = process.env.TEST_ADMIN_DATABASE_URL ?? 'postgres://notes:notes@localhost:5320/notes'
@@ -258,6 +258,12 @@ describe.skipIf(!available)('sync server end to end', () => {
     expect(session.expiresAt).toBeGreaterThan(Date.now())
     // Nothing is left pending to approve.
     await expect(decideRequest(pool, state.matchCode, 'approved')).rejects.toThrow(/No pending request/)
+  })
+
+  it('refuses a passkey that can be synced to other devices', async () => {
+    const a = await newDevice()
+    await expect(requestAccess(a.store, url, 'Phone', softPasskeys({ synced: true }))).rejects.toThrow(/can be synced/)
+    expect(await pendingRequests(pool)).toEqual([])
   })
 
   it('keeps denied, revoked and unknown devices out', async () => {

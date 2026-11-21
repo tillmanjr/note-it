@@ -13,6 +13,7 @@ import { EvernoteEncrypted } from './extensions/evernoteEncrypted'
 import { Indent } from './extensions/indent'
 import { Monospace } from './extensions/monospace'
 import { Paste, type PasteOptions } from './extensions/paste'
+import { VaultSection, type VaultBridge } from './extensions/vaultSection'
 
 /** Yjs fragment holding a note body inside its Y.Doc. */
 export const NOTE_BODY_FIELD = 'body'
@@ -23,10 +24,12 @@ export interface NoteExtensionOptions {
   ydoc?: Doc
   /** Maps an image `src` (e.g. `attachment:<hash>`) to a URL the webview can load. */
   resolveImageSrc?: (src: string) => string
+  /** Opens and encrypts vault sections. Without it, sections only show as locked (headless use, imports). */
+  vault?: VaultBridge
 }
 
 // The note schema. Shared by the live editor and headless conversions (import/export, round-trip checks).
-export function noteExtensions({ paste = {}, ydoc, resolveImageSrc }: NoteExtensionOptions = {}): Extensions {
+export function noteExtensions({ paste = {}, ydoc, resolveImageSrc, vault }: NoteExtensionOptions = {}): Extensions {
   return [
     StarterKit.configure({
       link: { openOnClick: false, autolink: true, defaultProtocol: 'https' },
@@ -45,6 +48,8 @@ export function noteExtensions({ paste = {}, ydoc, resolveImageSrc }: NoteExtens
     Indent,
     Monospace,
     EvernoteEncrypted,
+    // An open section's inner editor: the same schema, held in memory only (no Yjs).
+    VaultSection.configure({ bridge: vault ?? null, innerExtensions: () => noteExtensions({ paste, resolveImageSrc }) }),
     Paste.configure(paste),
     ...(ydoc ? [Collaboration.configure({ document: ydoc, field: NOTE_BODY_FIELD })] : []),
   ]

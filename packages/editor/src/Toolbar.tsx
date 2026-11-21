@@ -2,8 +2,8 @@ import { useEditorState, type Editor } from '@tiptap/react'
 import { BlockStyleSelect } from './BlockStyleSelect'
 import { FontMenu, HighlightMenu, ListMenu, TextColorMenu } from './FormatMenus'
 
-// Main formatting toolbar.
-export function Toolbar({ editor }: { editor: Editor }) {
+// Main formatting toolbar. `onEncrypt` adds the Encrypt selection button (vault sections, docs/vault.md).
+export function Toolbar({ editor, onEncrypt }: { editor: Editor; onEncrypt?: () => void }) {
   const s = useEditorState({
     editor,
     selector: ({ editor: e }) => ({
@@ -74,6 +74,7 @@ export function Toolbar({ editor }: { editor: Editor }) {
       <div className="group">
         {btn('―', false, () => c().setHorizontalRule().run(), 'Divider')}
         {btn('⊞', s.table, () => c().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(), 'Insert table')}
+        {onEncrypt && btn('🔒', false, onEncrypt, 'Encrypt selection (vault)')}
         {s.table && (
           <>
             {btn('+row', false, () => c().addRowAfter().run())}

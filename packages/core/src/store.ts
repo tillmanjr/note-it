@@ -6,6 +6,7 @@ import { SyncLedger } from './ledger'
 import type { Attachment, Id, NoteCounts, NoteMeta, NoteQuery, Notebook, Tag } from './model'
 import { MIGRATIONS } from './schema'
 import { cleanTagName, descendantTagIds, wouldCreateCycle } from './tagTree'
+import type { KeyWrap, VaultKeyRecord } from './vault'
 
 /** Minimal SQL access implemented per platform (Tauri plugin-sql, Capacitor SQLite, node:sqlite in tests). */
 export interface SqlDriver {
@@ -77,6 +78,7 @@ const NOTEBOOK_FIELDS = ['name', 'sort', 'created_at', 'updated_at', 'deleted_at
 const TAG_FIELDS = ['parent_id', 'name', 'created_at', 'updated_at', 'deleted_at'] as const
 const NOTE_FIELDS = ['notebook_id', 'title', 'created_at', 'updated_at', 'deleted_at', 'tags'] as const
 const ATTACHMENT_FIELDS = ['mime', 'size', 'filename', 'created_at'] as const
+const VAULT_KEY_FIELDS = ['wrap', 'created_at'] as const
 
 export class NoteStore {
   private readonly db: SqlDriver
@@ -442,6 +444,32 @@ export class NoteStore {
     await this.ledger.track('note', id, NOTE_FIELDS)
     await this.ledger.bodyChanged(id)
     return id
+  }
+
+  // ---------- Vault keys (docs/vault.md) ----------
+
+  /** The vault's keys, oldest first. Usually one; more only if two devices set up a vault while offline. */
+  async listVaultKeys(): Promise<VaultKeyRecord[]> {
+    const rows = await this.db.select<{ id: string; wrap: string; created_at: number }>(
+      `SELECT id, wrap, created_at FROM vault_key WHERE deleted_at IS NULL AND wrap != '' ORDER BY created_at, id`,
+    )
+    return rows.flatMap((r) => {
+      try {
+        return [{ id: r.id, wrap: JSON.parse(r.wrap) as KeyWrap, createdAt: r.created_at }]
+      } catch {
+        return []
+      }
+    })
+  }
+
+  /** Adds a new vault key, or stores a rewrapped one (a passphrase change). */
+  async saveVaultKey(record: VaultKeyRecord): Promise<void> {
+    await this.db.execute(
+      `INSERT INTO vault_key (id, wrap, created_at) VALUES (?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET wrap = excluded.wrap`,
+      [record.id, JSON.stringify(record.wrap), record.createdAt],
+    )
+    await this.ledger.track('vault_key', record.id, VAULT_KEY_FIELDS)
   }
 
   // ---------- Attachments ----------

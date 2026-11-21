@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { SyncStatus } from '@tdjr/core'
 import type { Access } from '../sync'
 import type { ThemePref } from '../theme'
+import { ChangePassphraseDialog, useVault } from './VaultDialogs'
 import { formatWhen } from './NoteList'
 
 const THEMES: { pref: ThemePref; icon: string; label: string }[] = [
@@ -158,6 +159,8 @@ export function SettingsMenu({
   sync: SyncMenu
 }) {
   const [open, setOpen] = useState(false)
+  const [changing, setChanging] = useState(false)
+  const vault = useVault()
   const close = (action: () => void) => () => {
     setOpen(false)
     action()
@@ -211,8 +214,24 @@ export function SettingsMenu({
           <div className="menu-separator" />
           <div className="menu-label">Sync</div>
           <SyncItems sync={sync} close={close} />
+          {vault.exists && (
+            <>
+              <div className="menu-separator" />
+              <div className="menu-label">Vault</div>
+              {vault.open && (
+                <button className="menu-item" role="menuitem" onClick={close(() => vault.vault?.lock())}>
+                  <span className="menu-icon">🔒</span> Lock vault
+                  <span className="menu-hint">hides encrypted sections</span>
+                </button>
+              )}
+              <button className="menu-item" role="menuitem" onClick={close(() => setChanging(true))}>
+                <span className="menu-icon">🔑</span> Change vault passphrase…
+              </button>
+            </>
+          )}
         </div>
       )}
+      {changing && <ChangePassphraseDialog onClose={() => setChanging(false)} />}
     </div>
   )
 }

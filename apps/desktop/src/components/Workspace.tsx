@@ -7,6 +7,7 @@ import { ImportDialog } from './ImportDialog'
 import { NotesAboveEditor, NotesSection, useNotesPlacement } from './NotesSection'
 import { DisconnectDialog, RequestAccessDialog, WaitingDialog } from './SyncDialogs'
 import { useSync } from '../sync'
+import { VaultProvider } from './VaultDialogs'
 
 const LAST_NOTE_KEY = 'tdjr.lastNoteByView'
 
@@ -212,107 +213,109 @@ export function Workspace({ store }: { store: NoteStore }) {
   )
 
   return (
-    <div className="workspace">
-      <LeftPane
-        store={store}
-        notebooks={notebooks}
-        tags={tags}
-        view={view}
-        viewTitle={title}
-        notes={notes}
-        counts={counts}
-        sort={sort}
-        selectedId={current?.id ?? null}
-        notesPlacement={notesPlacement}
-        onNotesPlacement={setNotesPlacement}
-        onView={setView}
-        onSort={setSort}
-        onSelect={(id) => void openNote(id)}
-        onNew={() => void newNote()}
-        onSearch={() => setSearchOpen(true)}
-        onImport={() => setImportOpen(true)}
-        sync={{
-          access: sync.access,
-          status: sync.status,
-          onRequest: () => setSyncDialog('request'),
-          onWaiting: () => setSyncDialog('waiting'),
-          onSignIn: sync.signIn,
-          onSyncNow: () => void sync.client?.syncNow(),
-          onDisconnect: () => setSyncDialog('disconnect'),
-        }}
-        onChanged={async () => {
-          await refreshOrganization()
-          await refreshNotes()
-          if (current) await openNote(current.id)
-        }}
-      />
-      {notesPlacement === 'top' ? (
-        <NotesAboveEditor
-          notesSection={
-            <NotesSection
-              notes={notes}
-              notebooks={notebooks}
-              viewTitle={title}
-              inTrash={view.kind === 'trash'}
-              sort={sort}
-              selectedId={current?.id ?? null}
-              placement="top"
-              collapsed={false}
-              onSort={setSort}
-              onSelect={(id) => void openNote(id)}
-              onPlacement={setNotesPlacement}
-            />
-          }
-          editor={editor}
-        />
-      ) : (
-        editor
-      )}
-      {importOpen && (
-        <ImportDialog
+    <VaultProvider store={store}>
+      <div className="workspace">
+        <LeftPane
           store={store}
           notebooks={notebooks}
-          onClose={async (notebookId) => {
-            setImportOpen(false)
+          tags={tags}
+          view={view}
+          viewTitle={title}
+          notes={notes}
+          counts={counts}
+          sort={sort}
+          selectedId={current?.id ?? null}
+          notesPlacement={notesPlacement}
+          onNotesPlacement={setNotesPlacement}
+          onView={setView}
+          onSort={setSort}
+          onSelect={(id) => void openNote(id)}
+          onNew={() => void newNote()}
+          onSearch={() => setSearchOpen(true)}
+          onImport={() => setImportOpen(true)}
+          sync={{
+            access: sync.access,
+            status: sync.status,
+            onRequest: () => setSyncDialog('request'),
+            onWaiting: () => setSyncDialog('waiting'),
+            onSignIn: sync.signIn,
+            onSyncNow: () => void sync.client?.syncNow(),
+            onDisconnect: () => setSyncDialog('disconnect'),
+          }}
+          onChanged={async () => {
             await refreshOrganization()
-            if (notebookId) setView({ kind: 'notebook', id: notebookId })
-            else await refreshNotes()
+            await refreshNotes()
+            if (current) await openNote(current.id)
           }}
         />
-      )}
-      {syncDialog === 'request' && (
-        <RequestAccessDialog
-          onRequest={async (serverUrl, deviceName) => {
-            await sync.request(serverUrl, deviceName)
-            setSyncDialog('waiting')
-          }}
-          onClose={() => setSyncDialog((d) => (d === 'request' ? null : d))}
-        />
-      )}
-      {syncDialog === 'waiting' && sync.access.phase === 'waiting' && (
-        <WaitingDialog
-          serverUrl={sync.access.config.serverUrl}
-          matchCode={sync.access.matchCode}
-          onCheck={sync.signIn}
-          onClose={() => setSyncDialog(null)}
-        />
-      )}
-      {syncDialog === 'disconnect' && 'config' in sync.access && (
-        <DisconnectDialog deviceId={sync.access.config.deviceId} onDisconnect={sync.disconnect} onClose={() => setSyncDialog(null)} />
-      )}
-      {searchOpen && (
-        <SearchOverlay
-          store={store}
-          notebooks={notebooks}
-          scope={searchScope}
-          onOpen={(id) => {
-            setSearchOpen(false)
-            void openNote(id)
-          }}
-          onClose={() => setSearchOpen(false)}
-        />
-      )}
-    </div>
+        {notesPlacement === 'top' ? (
+          <NotesAboveEditor
+            notesSection={
+              <NotesSection
+                notes={notes}
+                notebooks={notebooks}
+                viewTitle={title}
+                inTrash={view.kind === 'trash'}
+                sort={sort}
+                selectedId={current?.id ?? null}
+                placement="top"
+                collapsed={false}
+                onSort={setSort}
+                onSelect={(id) => void openNote(id)}
+                onPlacement={setNotesPlacement}
+              />
+            }
+            editor={editor}
+          />
+        ) : (
+          editor
+        )}
+        {importOpen && (
+          <ImportDialog
+            store={store}
+            notebooks={notebooks}
+            onClose={async (notebookId) => {
+              setImportOpen(false)
+              await refreshOrganization()
+              if (notebookId) setView({ kind: 'notebook', id: notebookId })
+              else await refreshNotes()
+            }}
+          />
+        )}
+        {syncDialog === 'request' && (
+          <RequestAccessDialog
+            onRequest={async (serverUrl, deviceName) => {
+              await sync.request(serverUrl, deviceName)
+              setSyncDialog('waiting')
+            }}
+            onClose={() => setSyncDialog((d) => (d === 'request' ? null : d))}
+          />
+        )}
+        {syncDialog === 'waiting' && sync.access.phase === 'waiting' && (
+          <WaitingDialog
+            serverUrl={sync.access.config.serverUrl}
+            matchCode={sync.access.matchCode}
+            onCheck={sync.signIn}
+            onClose={() => setSyncDialog(null)}
+          />
+        )}
+        {syncDialog === 'disconnect' && 'config' in sync.access && (
+          <DisconnectDialog deviceId={sync.access.config.deviceId} onDisconnect={sync.disconnect} onClose={() => setSyncDialog(null)} />
+        )}
+        {searchOpen && (
+          <SearchOverlay
+            store={store}
+            notebooks={notebooks}
+            scope={searchScope}
+            onOpen={(id) => {
+              setSearchOpen(false)
+              void openNote(id)
+            }}
+            onClose={() => setSearchOpen(false)}
+          />
+        )}
+      </div>
+    </VaultProvider>
   )
 }
 

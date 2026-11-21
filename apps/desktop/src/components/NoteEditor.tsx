@@ -3,11 +3,12 @@ import * as Y from 'yjs'
 import { EditorContent, useEditor, type Editor } from '@tiptap/react'
 import { Selection } from '@tiptap/pm/state'
 import { attachmentRef, parseAttachmentRef, type Id, type NoteMeta, type NoteStore, type Notebook, type Tag } from '@tdjr/core'
-import { isChangeOrigin, noteExtensions, SelectionFormatBar, Toolbar } from '@tdjr/editor'
+import { encryptSelection, isChangeOrigin, noteExtensions, SelectionFormatBar, Toolbar, type VaultBridge } from '@tdjr/editor'
 import { TagPicker } from './TagPicker'
 import { ConfirmButton } from './controls'
 import { formatWhen } from './NoteList'
 import { Tooltip } from './Tooltip'
+import { useVault } from './VaultDialogs'
 
 const LOAD_ORIGIN = 'load'
 /** Updates synced from another device: already stored, so not saved again. */
@@ -31,6 +32,19 @@ interface Props {
 export function NoteEditor({ store, note, notebooks, tags, onPatch, onTagsCreated, onRemoved }: Props) {
   const [doc, setDoc] = useState<Y.Doc | null>(null)
   const [editor, setEditor] = useState<Editor | null>(null)
+  /** The inner editor of the open vault section being edited, which the toolbar then acts on. */
+  const [sectionEditor, setSectionEditor] = useState<Editor | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
+  const { vault } = useVault()
+  const bridge = useMemo<VaultBridge | undefined>(
+    () => (vault ? { ...vault.bridge, focusEditor: (e) => setSectionEditor(e && !e.isDestroyed ? e : null) } : undefined),
+    [vault],
+  )
+  useEffect(() => {
+    if (!notice) return
+    const t = setTimeout(() => setNotice(null), 6000)
+    return () => clearTimeout(t)
+  }, [notice])
   const [title, setTitle] = useState(note.title)
   const trashed = note.deletedAt !== null
   const bodyFocus = useRef<() => void>(() => {})
@@ -118,7 +132,25 @@ export function NoteEditor({ store, note, notebooks, tags, onPatch, onTagsCreate
           />
         </div>
       )}
-      {!trashed && (editor ? <Toolbar editor={editor} /> : <div className="toolbar toolbar-placeholder" />)}
+      {!trashed &&
+        (editor ? (
+          <Toolbar
+            key={sectionEditor ? 'section' : 'note'}
+            editor={sectionEditor ?? editor}
+            onEncrypt={
+              bridge && !sectionEditor
+                ? () => void encryptSelection(editor, bridge).then((msg) => setNotice(msg))
+                : undefined
+            }
+          />
+        ) : (
+          <div className="toolbar toolbar-placeholder" />
+        ))}
+      {notice && (
+        <div className="editor-notice" role="status">
+          {notice}
+        </div>
+      )}
       <div className="note-body" onClick={(e) => e.target === e.currentTarget && editor?.commands.focus('end')}>
         <textarea
           ref={titleInput}
@@ -156,6 +188,8 @@ export function NoteEditor({ store, note, notebooks, tags, onPatch, onTagsCreate
             focusRef={bodyFocus}
             onExitTop={focusTitleEnd}
             onEditor={setEditor}
+            vault={bridge}
+            onNoteFocus={() => setSectionEditor(null)}
           />
         ) : (
           <div className="loading" />
@@ -223,6 +257,8 @@ function NoteBody({
   focusRef,
   onExitTop,
   onEditor,
+  vault,
+  onNoteFocus,
 }: {
   store: NoteStore
   noteId: Id
@@ -233,6 +269,9 @@ function NoteBody({
   /** Called when the caret leaves the top of the note (up, left or backspace at the very start). */
   onExitTop: () => void
   onEditor: (editor: Editor | null) => void
+  vault?: VaultBridge
+  /** The note itself (not a vault section inside it) got focus. */
+  onNoteFocus: () => void
 }) {
   // True once the user changes the document; Yjs/editor bookkeeping updates don't count as edits.
   const edited = useRef(false)
@@ -275,6 +314,7 @@ function NoteBody({
     () =>
       noteExtensions({
         ydoc: doc,
+        vault,
         resolveImageSrc: (src) => {
           const hash = parseAttachmentRef(src)
           return hash ? store.attachmentUrl(hash) : src
@@ -289,7 +329,7 @@ function NoteBody({
             ),
         },
       }),
-    [doc, store],
+    [doc, store, vault],
   )
 
   const indexNow = (text: string) => {
@@ -327,6 +367,7 @@ function NoteBody({
       onCreate: ({ editor }) => {
         lastText.current = editor.getText()
       },
+      onFocus: () => onNoteFocus(),
       onUpdate: ({ editor, transaction }) => {
         if (!isChangeOrigin(transaction)) edited.current = true
         clearTimeout(indexTimer.current)

@@ -170,6 +170,39 @@ ul[data-type='taskList'] ul[data-type='taskList'] { padding-left: 1.4em; }
 }
 .tiptap .evernote-encrypted.ProseMirror-selectednode { outline: 2px solid var(--accent, #2370b8); }
 
+/* ---------- Vault sections (docs/vault.md) ---------- */
+.tiptap .vault-section {
+  margin: 6px 0;
+  border: 1px dashed var(--border, #999);
+  border-radius: 8px;
+  user-select: none;
+}
+.tiptap .vault-section.open { border-style: solid; border-color: var(--accent, #2370b8); }
+.tiptap .vault-section.selected { outline: 2px solid var(--accent, #2370b8); }
+.tiptap .vault-section-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 10px;
+  color: var(--muted, #777);
+  font-size: 0.85em;
+}
+.tiptap .vault-section-label { flex: 1; }
+.tiptap .vault-section-button {
+  padding: 2px 8px;
+  border: 1px solid var(--border, #999);
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.tiptap .vault-section-button:hover { background: var(--hover, rgba(127, 127, 127, 0.15)); color: var(--text, inherit); }
+.tiptap .vault-section-button.danger:hover { color: var(--danger, #c0392b); border-color: var(--danger, #c0392b); }
+.tiptap .vault-section-body:empty { display: none; }
+.tiptap .vault-section-body { padding: 0 12px 6px; user-select: text; }
+.tiptap .vault-section-body .tiptap { outline: none; min-height: 1.5em; }
+
 /* ---------- Compact menus (text color, highlight, lists, font) ---------- */
 .dropdown { position: relative; display: inline-flex; }
 .toolbar .dropdown-button,

@@ -8,7 +8,7 @@ const DEFAULT_SERVER = import.meta.env.DEV ? 'http://localhost:5319' : 'https://
 const errorText = (e: unknown) =>
   e instanceof TypeError ? 'Can’t reach the server. Check the address and that the server is running.' : e instanceof Error ? e.message : String(e)
 
-function Dialog({ title, onClose, children, footer }: { title: string; onClose: () => void; children: ReactNode; footer: ReactNode }) {
+export function Dialog({ title, onClose, children, footer }: { title: string; onClose: () => void; children: ReactNode; footer: ReactNode }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
     window.addEventListener('keydown', onKey)

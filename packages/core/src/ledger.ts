@@ -18,6 +18,7 @@ const TABLE: Record<RecordKind, { table: string; key: string }> = {
   tag: { table: 'tag', key: 'id' },
   note: { table: 'note', key: 'id' },
   attachment: { table: 'attachment', key: 'hash' },
+  vault_key: { table: 'vault_key', key: 'id' },
 }
 
 /** Placeholder rows for records first seen through one field; the remaining fields arrive in the same pull. */
@@ -26,6 +27,7 @@ const PLACEHOLDER: Record<RecordKind, string> = {
   tag: `INSERT OR IGNORE INTO tag (id, parent_id, name, created_at, updated_at) VALUES (?, NULL, '', 0, 0)`,
   note: `INSERT OR IGNORE INTO note (id, notebook_id, title, created_at, updated_at) VALUES (?, '', '', 0, 0)`,
   attachment: `INSERT OR IGNORE INTO attachment (hash, mime, size, filename, created_at) VALUES (?, 'application/octet-stream', 0, '', 0)`,
+  vault_key: `INSERT OR IGNORE INTO vault_key (id, wrap, created_at) VALUES (?, '', 0)`,
 }
 
 /** SQLite allows at most 999 bound parameters per statement. */
@@ -293,6 +295,7 @@ export class SyncLedger {
     await seed('tag', SYNC_FIELDS.tag, 'updated_at')
     await seed('note', SYNC_FIELDS.note.filter((f) => f !== 'purged'), 'updated_at')
     await seed('attachment', SYNC_FIELDS.attachment, 'created_at')
+    await seed('vault_key', SYNC_FIELDS.vault_key, 'created_at')
     await this.db.execute(
       `INSERT OR IGNORE INTO field_state (kind, id, field, ts, pending)
        SELECT 'note', id, 'purged', ?, 1 FROM purged_note`,
@@ -305,9 +308,9 @@ export class SyncLedger {
     )
   }
 
-  /** Removes all notes, notebooks, tags and attachments here (a fresh device joining a server that has data). */
+  /** Removes all notes, notebooks, tags, attachments and vault keys here (a fresh device joining a server that has data). */
   async resetLocalData(): Promise<void> {
-    for (const table of ['notebook', 'tag', 'note', 'note_tag', 'note_update', 'note_fts', 'attachment', 'field_state', 'body_state', 'purged_note', 'blob_missing']) {
+    for (const table of ['notebook', 'tag', 'note', 'note_tag', 'note_update', 'note_fts', 'attachment', 'field_state', 'body_state', 'purged_note', 'blob_missing', 'vault_key']) {
       await this.db.execute(`DELETE FROM ${table}`)
     }
   }

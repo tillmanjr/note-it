@@ -26,7 +26,7 @@ const config = {
   host: env.HOST ?? '127.0.0.1',
   port: Number(env.PORT ?? 5319),
   blobDir: env.BLOB_DIR ?? './data/blobs',
-  corsOrigins: list(env.CORS_ORIGINS ?? 'http://localhost:5318,http://tauri.localhost,tauri://localhost'),
+  corsOrigins: list(env.CORS_ORIGINS ?? 'http://localhost:5318,http://tauri.localhost,tauri://localhost,https://localhost'),
   passkey: {
     rpId: env.RP_ID ?? 'localhost',
     rpName: env.RP_NAME ?? 'Notes',

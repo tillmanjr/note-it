@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { runningInTauri } from '../platform'
+import { runningInCapacitor, runningInTauri } from '../platform'
 
 /** The local server while developing, the droplet in a release build. */
 const DEFAULT_SERVER = import.meta.env.DEV ? 'http://localhost:5319' : 'https://notes.tillmanjr.com'
@@ -40,7 +40,7 @@ export function RequestAccessDialog({
   onClose: () => void
 }) {
   const [server, setServer] = useState(DEFAULT_SERVER)
-  const [name, setName] = useState(runningInTauri ? 'Desktop' : 'Browser')
+  const [name, setName] = useState(runningInTauri ? 'Desktop' : runningInCapacitor ? 'Tablet' : 'Browser')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const submit = async () => {

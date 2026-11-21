@@ -602,3 +602,14 @@ button.primary:hover:not(:disabled) { filter: brightness(1.08); }
 .tag-chip button:hover { color: var(--text); background: color-mix(in srgb, var(--text) 14%, transparent); border-radius: 50%; }
 .note-footer select:not(:disabled) { cursor: pointer; }
 .note-footer .tag-picker input:hover::placeholder { color: var(--text); }
+
+/* ---------- Touch screens (the Android tablet, docs/mobile.md) ---------- */
+@media (pointer: coarse) {
+  .left-pane .row, .note-list li { min-height: 44px; }
+  /* No hover on touch: a row's actions show on the selected row instead. */
+  .left-pane .row.active .row-actions { display: flex; }
+  .left-pane .row-actions button { min-width: 36px; min-height: 36px; }
+  .settings-menu .menu-item { min-height: 44px; }
+  .dialog button, .trash-bar button, .note-footer button { min-height: 40px; }
+  .form-fields input { min-height: 40px; font-size: 16px; }
+}

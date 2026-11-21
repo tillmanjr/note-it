@@ -1,0 +1,21 @@
+{
+  "name": "@tdjr/mobile",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The Android tablet app: Capacitor around the desktop app's web UI (docs/mobile.md).",
+  "scripts": {
+    "build:web": "npm run build -w @tdjr/desktop",
+    "sync": "npm run build:web && cap sync android",
+    "open": "cap open android"
+  },
+  "dependencies": {
+    "@capacitor-community/sqlite": "8.1.1",
+    "@capacitor/android": "8.6.0",
+    "@capacitor/app": "8.1.2",
+    "@capacitor/core": "8.6.0",
+    "@capacitor/filesystem": "8.1.5"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.6.0"
+  }
+}

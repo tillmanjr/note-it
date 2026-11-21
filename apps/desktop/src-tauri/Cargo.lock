@@ -4312,6 +4312,7 @@ dependencies = [
 name = "tdjr-notes"
 version = "0.1.0"
 dependencies = [
+ "base64 0.22.1",
  "log",
  "serde",
  "serde_json",
@@ -4320,6 +4321,7 @@ dependencies = [
  "tauri-plugin-fs",
  "tauri-plugin-log",
  "tauri-plugin-sql",
+ "windows",
 ]
 
 [[package]]

@@ -46,29 +46,75 @@ export interface SyncResponse {
   hasMore: boolean
 }
 
-export interface EnrollRequest {
-  code: string
+// ---------- Joining and signing in (passkeys) ----------
+// Byte fields are base64url strings. A device registers its own passkey with a request; an admin approves
+// it on the server; the device then signs in with that passkey on each launch to get a short-lived token.
+
+export interface AccessRequest {
   deviceName: string
 }
 
-export interface EnrollResponse {
+/** What a device's authenticator needs to create its passkey. */
+export interface PasskeyCreateOptions {
+  rpId: string
+  rpName: string
+  /** The WebAuthn user handle (this device's request id, as bytes). */
+  userId: string
+  userName: string
+  challenge: string
+  timeoutMs: number
+}
+
+export interface AccessRequestStarted {
+  requestId: string
+  options: PasskeyCreateOptions
+}
+
+/** A newly created passkey, as the authenticator returned it. */
+export interface PasskeyCreated {
+  credentialId: string
+  clientDataJSON: string
+  attestationObject: string
+  transports?: string[]
+}
+
+export type AccessStatus = 'pending' | 'approved' | 'denied' | 'revoked' | 'expired'
+
+export interface AccessRequestState {
+  status: AccessStatus
+  /** Shown on the device and by `notes-admin pending`; approve only the request whose code matches. */
+  matchCode: string
+}
+
+export interface SignInRequest {
   deviceId: string
+}
+
+export interface PasskeyGetOptions {
+  rpId: string
+  challenge: string
+  allowCredentials: string[]
+  timeoutMs: number
+}
+
+export interface PasskeyAssertion {
+  credentialId: string
+  clientDataJSON: string
+  authenticatorData: string
+  signature: string
+  userHandle?: string
+}
+
+export interface SessionRequest {
+  deviceId: string
+  assertion: PasskeyAssertion
+}
+
+export interface Session {
   token: string
-  /** Whether the server already holds notes (decides whether a fresh device keeps its local starter data). */
-  serverHasData: boolean
-}
-
-export interface DeviceCode {
-  code: string
   expiresAt: number
-}
-
-export interface DeviceInfo {
-  id: string
-  name: string
-  createdAt: number
-  lastSeenAt: number | null
-  current: boolean
+  /** Whether the server already holds notes (decides whether a newly joined device keeps its starter data). */
+  serverHasData: boolean
 }
 
 /** Sent over the event socket. The client authenticates with its first message. */

@@ -43,6 +43,35 @@ const MIGRATIONS: string[][] = [
     `CREATE INDEX body_update_note ON body_update (note_id)`,
     `CREATE TABLE blob (hash TEXT PRIMARY KEY, size BIGINT NOT NULL, created_at BIGINT NOT NULL)`,
   ],
+  // Passkeys (docs/passkeys.md). Devices that joined with codes and bearer tokens are cut off; they request
+  // access again. Status: new (passkey not yet sent), pending, approved, denied, revoked.
+  [
+    `ALTER TABLE device ALTER COLUMN token_hash DROP NOT NULL`,
+    `ALTER TABLE device ADD COLUMN status TEXT NOT NULL DEFAULT 'revoked'`,
+    `ALTER TABLE device ALTER COLUMN status DROP DEFAULT`,
+    `UPDATE device SET token_hash = NULL, revoked_at = COALESCE(revoked_at, (extract(epoch FROM now()) * 1000)::bigint)`,
+    `ALTER TABLE device ADD COLUMN credential_id TEXT UNIQUE`,
+    `ALTER TABLE device ADD COLUMN public_key BYTEA`,
+    `ALTER TABLE device ADD COLUMN sign_count BIGINT NOT NULL DEFAULT 0`,
+    `ALTER TABLE device ADD COLUMN transports TEXT`,
+    `ALTER TABLE device ADD COLUMN match_code TEXT`,
+    `ALTER TABLE device ADD COLUMN decided_at BIGINT`,
+    `DROP TABLE enroll_code`,
+    `CREATE TABLE challenge (
+      device_id TEXT NOT NULL,
+      purpose TEXT NOT NULL,
+      challenge TEXT NOT NULL,
+      expires_at BIGINT NOT NULL,
+      PRIMARY KEY (device_id, purpose)
+    )`,
+    `CREATE TABLE session (
+      token_hash TEXT PRIMARY KEY,
+      device_id TEXT NOT NULL,
+      created_at BIGINT NOT NULL,
+      expires_at BIGINT NOT NULL
+    )`,
+    `CREATE INDEX session_device ON session (device_id)`,
+  ],
 ]
 
 export function createPool(connectionString: string): pg.Pool {

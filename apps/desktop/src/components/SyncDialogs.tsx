@@ -1,8 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import type { DeviceCode, DeviceInfo, SyncClient } from '@tdjr/core'
 import { runningInTauri } from '../platform'
-import { formatWhen } from './NoteList'
 
 const DEFAULT_SERVER = 'http://localhost:5319'
 
@@ -32,16 +30,15 @@ function Dialog({ title, onClose, children, footer }: { title: string; onClose: 
   )
 }
 
-/** Connects this device to a sync server with a one-time code. */
-export function ConnectDialog({
-  onConnect,
+/** Asks a server for access: creates this device's passkey (Windows Hello) and sends its public half. */
+export function RequestAccessDialog({
+  onRequest,
   onClose,
 }: {
-  onConnect: (serverUrl: string, code: string, deviceName: string) => Promise<void>
+  onRequest: (serverUrl: string, deviceName: string) => Promise<void>
   onClose: () => void
 }) {
   const [server, setServer] = useState(DEFAULT_SERVER)
-  const [code, setCode] = useState('')
   const [name, setName] = useState(runningInTauri ? 'Desktop' : 'Browser')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -49,7 +46,7 @@ export function ConnectDialog({
     setBusy(true)
     setError(null)
     try {
-      await onConnect(server, code, name)
+      await onRequest(server, name)
       onClose()
     } catch (e) {
       setError(errorText(e))
@@ -58,22 +55,22 @@ export function ConnectDialog({
   }
   return (
     <Dialog
-      title="Connect to server"
+      title="Request access"
       onClose={onClose}
       footer={
         <>
           {error && <span className="error">{error}</span>}
           <span className="spacer" />
           <button onClick={onClose}>Cancel</button>
-          <button className="primary" disabled={busy || !server.trim() || !code.trim()} onClick={() => void submit()}>
-            {busy ? 'Connecting…' : 'Connect'}
+          <button className="primary" disabled={busy || !server.trim()} onClick={() => void submit()}>
+            {busy ? 'Confirm with Windows Hello…' : 'Request access'}
           </button>
         </>
       }
     >
       <p className="hint">
-        Your notes sync to this server and to your other devices. For the first device, use the setup code the server
-        printed when it started. For another device, open ⚙ → Add a device on a device that’s already connected.
+        This device creates its own passkey, which never leaves it. The server then has to approve the request before
+        anything syncs. You’ll get a short code to match when approving it.
       </p>
       <form
         className="form-fields"
@@ -84,19 +81,7 @@ export function ConnectDialog({
       >
         <label>
           Server
-          <input id="sync-server" value={server} onChange={(e) => setServer(e.target.value)} spellCheck={false} />
-        </label>
-        <label>
-          Code
-          <input
-            id="sync-code"
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            placeholder="XXXX-XXXX"
-            autoFocus
-            spellCheck={false}
-            autoComplete="off"
-          />
+          <input id="sync-server" value={server} onChange={(e) => setServer(e.target.value)} spellCheck={false} autoFocus />
         </label>
         <label>
           Name for this device
@@ -108,84 +93,79 @@ export function ConnectDialog({
   )
 }
 
-/** Shows a short-lived code another device can use to connect. */
-export function AddDeviceDialog({ client, onClose }: { client: SyncClient; onClose: () => void }) {
-  const [code, setCode] = useState<DeviceCode | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  useEffect(() => {
-    client.createDeviceCode().then(setCode, (e: unknown) => setError(errorText(e)))
-  }, [client])
+/** The match code to approve on the server, while this device waits. */
+export function WaitingDialog({
+  serverUrl,
+  matchCode,
+  onCheck,
+  onClose,
+}: {
+  serverUrl: string
+  matchCode: string
+  onCheck: () => void
+  onClose: () => void
+}) {
   return (
-    <Dialog title="Add a device" onClose={onClose} footer={<><span className="spacer" /><button onClick={onClose}>Done</button></>}>
+    <Dialog
+      title="Waiting for approval"
+      onClose={onClose}
+      footer={
+        <>
+          <span className="spacer" />
+          <button onClick={onCheck}>Check now</button>
+          <button className="primary" onClick={onClose}>
+            Done
+          </button>
+        </>
+      }
+    >
       <p className="hint">
-        On the new device, open ⚙ → Connect to server, enter <strong>{client.config.serverUrl}</strong> and this code. It
-        works once and expires at {code ? new Date(code.expiresAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '…'}.
+        Approve this device on <strong>{serverUrl}</strong>, from the server’s shell. Approve only the request showing
+        this code. This device checks every 30 seconds and signs in once it’s approved; you can close this meanwhile.
       </p>
       <div className="device-code" aria-live="polite">
-        {error ? <span className="error">{error}</span> : (code?.code ?? '…')}
+        {matchCode}
       </div>
+      <p className="hint">
+        <code>notes-admin approve {matchCode}</code>
+        <br />
+        Locally: <code>npm run admin -w @tdjr/server -- approve {matchCode}</code>
+      </p>
     </Dialog>
   )
 }
 
-/** Lists connected devices; any of them can be disconnected. */
-export function DevicesDialog({
-  client,
-  onDisconnectThis,
+/** Forgets the server on this device. The server still trusts it until it's revoked there. */
+export function DisconnectDialog({
+  deviceId,
+  onDisconnect,
   onClose,
 }: {
-  client: SyncClient
-  onDisconnectThis: () => Promise<void>
+  deviceId: string
+  onDisconnect: () => Promise<void>
   onClose: () => void
 }) {
-  const [devices, setDevices] = useState<DeviceInfo[] | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [confirming, setConfirming] = useState<string | null>(null)
-  const load = () => client.listDevices().then(setDevices, (e: unknown) => setError(errorText(e)))
-  useEffect(() => {
-    void load()
-    // load only depends on the client
-  }, [client])
-
-  const disconnect = async (d: DeviceInfo) => {
-    setConfirming(null)
-    try {
-      await client.revokeDevice(d.id)
-      if (d.current) {
-        await onDisconnectThis()
-        onClose()
-      } else {
-        await load()
-      }
-    } catch (e) {
-      setError(errorText(e))
-    }
-  }
-
   return (
-    <Dialog title="Devices" onClose={onClose} footer={<>{error && <span className="error">{error}</span>}<span className="spacer" /><button onClick={onClose}>Done</button></>}>
+    <Dialog
+      title="Disconnect this device"
+      onClose={onClose}
+      footer={
+        <>
+          <span className="spacer" />
+          <button onClick={onClose}>Cancel</button>
+          <button className="primary danger" onClick={() => void onDisconnect().then(onClose)}>
+            Disconnect
+          </button>
+        </>
+      }
+    >
       <p className="hint">
-        These devices sync with {client.config.serverUrl}. Disconnecting one stops it syncing; its notes stay on it.
+        This device stops syncing and forgets the server. Its notes stay here. Its passkey still works on the server
+        until you revoke it there:
       </p>
-      <ul className="device-list">
-        {devices === null && !error && <li className="hint">Loading…</li>}
-        {devices?.map((d) => (
-          <li key={d.id}>
-            <span className="device-name">
-              {d.name}
-              {d.current && <span className="badge">this device</span>}
-            </span>
-            <span className="device-seen">{d.lastSeenAt ? `Last synced ${formatWhen(d.lastSeenAt)}` : 'Never synced'}</span>
-            {confirming === d.id ? (
-              <button className="danger" onClick={() => void disconnect(d)}>
-                Disconnect?
-              </button>
-            ) : (
-              <button onClick={() => setConfirming(d.id)}>Disconnect</button>
-            )}
-          </li>
-        ))}
-      </ul>
+      <p className="hint">
+        <code>notes-admin revoke {deviceId}</code>
+      </p>
     </Dialog>
   )
 }

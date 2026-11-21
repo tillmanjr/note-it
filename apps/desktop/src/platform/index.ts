@@ -1,7 +1,10 @@
 import { isTauri } from '@tauri-apps/api/core'
+import { Capacitor } from '@capacitor/core'
 import { NoteStore } from '@tdjr/core'
 
 export const runningInTauri = isTauri()
+/** The Android tablet app (apps/mobile). */
+export const runningInCapacitor = Capacitor.isNativePlatform()
 
 let opening: Promise<NoteStore> | null = null
 
@@ -16,6 +19,9 @@ async function open(): Promise<NoteStore> {
   if (runningInTauri) {
     const { tauriDriver, tauriBlobs } = await import('./tauri')
     store = new NoteStore(await tauriDriver(), await tauriBlobs())
+  } else if (runningInCapacitor) {
+    const { capacitorDriver, capacitorBlobs } = await import('./capacitor')
+    store = new NoteStore(await capacitorDriver(), await capacitorBlobs())
   } else {
     const { browserDriver, browserBlobs } = await import('./browser')
     store = new NoteStore(await browserDriver(), browserBlobs())

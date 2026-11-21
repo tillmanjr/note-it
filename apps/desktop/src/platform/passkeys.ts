@@ -1,8 +1,8 @@
 import { invoke } from '@tauri-apps/api/core'
-import type { PasskeyAssertion, PasskeyCreated, Passkeys } from '@tdjr/core'
-import { runningInTauri } from '.'
+import { nativeKeyPasskeys, type NativeKeys, type PasskeyAssertion, type PasskeyCreated, type Passkeys } from '@tdjr/core'
+import { runningInCapacitor, runningInTauri } from '.'
 
-// This device's passkey. In Tauri: Windows Hello through the Rust side (src-tauri/src/passkey.rs), which puts
+// This device's passkey. On the tablet: a Keystore device key (see below). In Tauri: Windows Hello through the Rust side (src-tauri/src/passkey.rs), which puts
 // the server's origin in the client data. In the browser dev build: navigator.credentials, which works only
 // when the page's domain is the server's passkey domain (localhost in development).
 
@@ -62,4 +62,11 @@ const browserPasskeys: Passkeys = {
   },
 }
 
-export const passkeys: Passkeys = runningInTauri ? tauriPasskeys : browserPasskeys
+// The tablet: a Keystore device key presented as a passkey (docs/mobile.md). Loaded lazily so the desktop
+// build doesn't pull in the Capacitor plugins.
+const lazyDeviceKeys: NativeKeys = {
+  createKey: async (alias) => (await import('./capacitor')).deviceKeys.createKey(alias),
+  sign: async (alias, data, reason) => (await import('./capacitor')).deviceKeys.sign(alias, data, reason),
+}
+
+export const passkeys: Passkeys = runningInTauri ? tauriPasskeys : runningInCapacitor ? nativeKeyPasskeys(lazyDeviceKeys) : browserPasskeys

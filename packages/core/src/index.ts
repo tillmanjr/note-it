@@ -6,6 +6,7 @@ export { bodyText, snippetOf, BODY_FIELD } from './bodyText'
 export { Hlc } from './hlc'
 export * from './syncProtocol'
 export * from './vault'
+export { nativeKeyPasskeys, type NativeKeys } from './nativeKey'
 export {
   SyncClient,
   SyncHttpError,

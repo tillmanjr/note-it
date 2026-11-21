@@ -1,6 +1,7 @@
 import { DatabaseSync } from 'node:sqlite'
 import { beforeEach, describe, expect, it } from 'vitest'
 import * as Y from 'yjs'
+import { bodyText } from './bodyText'
 import { NoteStore, ftsQuery, type BlobStore, type SqlDriver } from './store'
 import { buildTagTree, tagPath } from './tagTree'
 
@@ -96,6 +97,16 @@ describe('notebooks and notes', () => {
     expect((await store.listNotebooks()).map((x) => x.name)).toEqual(['B'])
     await store.restoreNote(n.id, b.id)
     expect((await store.getNote(n.id))?.notebookId).toBe(b.id)
+  })
+})
+
+describe('shared text', () => {
+  it('becomes a searchable note, one paragraph per line', async () => {
+    const nb = await store.createNotebook('Inbox')
+    const note = await store.createTextNote(nb.id, 'Article', 'https://example.com/a\r\n\nWorth reading')
+    const body = await store.loadNoteBody(note.id)
+    expect(body && bodyText(body)).toBe('https://example.com/a\n\nWorth reading')
+    expect((await store.searchNotes('reading')).map((h) => h.note.id)).toEqual([note.id])
   })
 })
 

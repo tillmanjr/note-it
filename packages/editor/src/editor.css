@@ -264,3 +264,10 @@ ul[data-type='taskList'] ul[data-type='taskList'] { padding-left: 1.4em; }
 .font-fields { display: flex; flex-direction: column; gap: 8px; min-width: 190px; }
 .font-fields label { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 12px; color: var(--muted); }
 .font-fields select { flex: 1; max-width: 140px; }
+
+/* Touch screens: finger-sized toolbar buttons. */
+@media (pointer: coarse) {
+  .toolbar button,
+  .toolbar select { min-width: 40px; height: 40px; font-size: 15px; }
+  .tiptap .vault-section-button { min-height: 36px; padding: 4px 12px; }
+}

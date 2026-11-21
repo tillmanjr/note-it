@@ -19,16 +19,18 @@ import {
   createVault,
   decryptSection,
   encryptSection,
+  nativeKeyPasskeys,
   requestAccess,
   signIn,
   unlockVault,
   type BlobStore,
+  type Passkeys,
   type SqlDriver,
 } from '@tdjr/core'
 import { buildApp } from './app'
 import { createPool, migrate } from './db'
 import { approvedDevices, decideRequest, pendingRequests, revokeDevice, type PasskeyConfig } from './passkey'
-import { softPasskeys } from './softPasskeys'
+import { softNativeKeys, softPasskeys } from './softPasskeys'
 
 const ADMIN_URL = process.env.TEST_ADMIN_DATABASE_URL ?? 'postgres://notes:notes@localhost:5320/notes'
 const TEST_URL = process.env.TEST_DATABASE_URL ?? 'postgres://notes:notes@localhost:5320/notes_test'
@@ -146,7 +148,7 @@ describe.skipIf(!available)('sync server end to end', () => {
   })
 
   /** Requests access, approves it as the admin would, signs in, and returns a client (socket optional). */
-  async function connect(device: TestDevice, name: string, socket = false) {
+  async function connect(device: Pick<TestDevice, 'store'> & { passkeys: Passkeys }, name: string, socket = false) {
     const { config, state } = await requestAccess(device.store, url, name, device.passkeys)
     await decideRequest(pool, state.matchCode, 'approved')
     const session = await signIn(device.store, config, device.passkeys)
@@ -277,6 +279,30 @@ describe.skipIf(!available)('sync server end to end', () => {
     await a.store.createNotebook('Shared')
     await ca.syncNow()
     await until(async () => (await b.store.listNotebooks()).some((n) => n.name === 'Shared'))
+  })
+
+  it('joins a tablet with a native device key presented as a passkey', async () => {
+    const desktop = await newDevice()
+    const nb = await desktop.store.createNotebook('Travel')
+    const note = await desktop.store.createNote(nb.id, 'Packing list')
+    const { client: cd } = await connect(desktop, 'Desktop')
+    await cd.syncNow()
+
+    const keys = softNativeKeys()
+    const tablet = { ...(await newDevice()), passkeys: nativeKeyPasskeys(keys) }
+    const { client: ct, config } = await connect(tablet, 'Tablet')
+    await ct.syncNow()
+    expect((await tablet.store.queryNotes()).map((n) => n.id)).toEqual([note.id])
+    expect(keys.signed).toBe(1)
+
+    // Signing in again needs the key again (one verification per sign-in); another device's key doesn't work.
+    await signIn(tablet.store, config, tablet.passkeys)
+    expect(keys.signed).toBe(2)
+    // A different key under the same id (a copied app, say) is refused by the server's signature check.
+    const impostorKeys = softNativeKeys()
+    const { rows } = await pool.query<{ credential_id: string }>('SELECT credential_id FROM device WHERE id = $1', [config.deviceId])
+    await impostorKeys.createKey(rows[0].credential_id)
+    expect(await refusalOf(signIn(tablet.store, config, nativeKeyPasskeys(impostorKeys)))).toBe('approved')
   })
 
   it('waits for approval, and only the matching code approves', async () => {

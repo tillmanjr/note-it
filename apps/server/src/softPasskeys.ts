@@ -1,6 +1,6 @@
 import { createHash, createSign, generateKeyPairSync, randomBytes, type KeyObject } from 'node:crypto'
 import { isoCBOR } from '@simplewebauthn/server/helpers'
-import type { Passkeys } from '@tdjr/core'
+import type { NativeKeys, Passkeys } from '@tdjr/core'
 
 // A software authenticator for tests: real ES256 passkeys, "none" attestation, user verification reported.
 // It answers like Windows Hello would, so the server's verification runs for real.
@@ -85,4 +85,41 @@ export function softPasskeys({ synced = false } = {}): Passkeys & { keys: Map<st
       }
     },
   }
+}
+
+/** A software stand-in for the Android Keystore behind nativeKeyPasskeys: P-256 keys, DER signatures. */
+export function softNativeKeys(): NativeKeys & { signed: number } {
+  const keys = new Map<string, CryptoKey>()
+  const state = {
+    signed: 0,
+    async createKey(alias: string) {
+      const pair = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign', 'verify'])
+      keys.set(alias, pair.privateKey)
+      const jwk = await crypto.subtle.exportKey('jwk', pair.publicKey)
+      return { x: jwk.x!, y: jwk.y! }
+    },
+    async sign(alias: string, data: string) {
+      const key = keys.get(alias)
+      if (!key) throw new Error('No such key')
+      const raw = new Uint8Array(
+        await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, key, Buffer.from(data, 'base64url')),
+      )
+      state.signed++
+      return Buffer.from(derSignature(raw)).toString('base64url')
+    },
+  }
+  return state
+}
+
+/** WebCrypto's r‖s ECDSA signature as DER, which Android Keystore (and WebAuthn) use. */
+function derSignature(raw: Uint8Array): Uint8Array {
+  const int = (b: Uint8Array) => {
+    let i = 0
+    while (i < b.length - 1 && b[i] === 0) i++
+    const v = b.subarray(i)
+    return v[0] & 0x80 ? Uint8Array.of(0x02, v.length + 1, 0, ...v) : Uint8Array.of(0x02, v.length, ...v)
+  }
+  const r = int(raw.subarray(0, 32))
+  const s = int(raw.subarray(32))
+  return Uint8Array.of(0x30, r.length + s.length, ...r, ...s)
 }

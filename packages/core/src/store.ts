@@ -1,6 +1,6 @@
 import { ulid } from 'ulid'
 import * as Y from 'yjs'
-import { snippetOf } from './bodyText'
+import { BODY_FIELD, snippetOf } from './bodyText'
 import { fromBase64, sha256Hex, toBase64 } from './encoding'
 import { SyncLedger } from './ledger'
 import type { Attachment, Id, NoteCounts, NoteMeta, NoteQuery, Notebook, Tag } from './model'
@@ -308,6 +308,23 @@ export class NoteStore {
     await this.db.execute('INSERT INTO note_fts (rowid, title, body) VALUES ((SELECT rid FROM note WHERE id = ?), ?, ?)', [id, title, ''])
     await this.ledger.track('note', id, NOTE_FIELDS)
     return { id, notebookId, title, snippet: '', tagIds: [], createdAt: t, updatedAt: t, deletedAt: null }
+  }
+
+  /** A new note holding plain text, one paragraph per line (text shared from another app). */
+  async createTextNote(notebookId: Id, title: string, text: string): Promise<NoteMeta> {
+    const note = await this.createNote(notebookId, title)
+    const doc = new Y.Doc()
+    const lines = text.replace(/\r\n?/g, '\n').split('\n')
+    doc.getXmlFragment(BODY_FIELD).push(
+      lines.map((line) => {
+        const p = new Y.XmlElement('paragraph')
+        if (line) p.insert(0, [new Y.XmlText(line)])
+        return p
+      }),
+    )
+    await this.appendNoteUpdate(note.id, Y.encodeStateAsUpdate(doc))
+    await this.indexNoteText(note.id, text)
+    return { ...note, snippet: snippetOf(text) }
   }
 
   async setNoteTitle(id: Id, title: string): Promise<void> {

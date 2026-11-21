@@ -7,6 +7,8 @@ import { ImportDialog } from './ImportDialog'
 import { NotesAboveEditor, NotesSection, useNotesPlacement } from './NotesSection'
 import { DisconnectDialog, RequestAccessDialog, WaitingDialog } from './SyncDialogs'
 import { useSync } from '../sync'
+import { runningInCapacitor } from '../platform'
+import type { Share } from '../platform/capacitor'
 import { VaultProvider } from './VaultDialogs'
 
 const LAST_NOTE_KEY = 'tdjr.lastNoteByView'
@@ -150,6 +152,33 @@ export function Workspace({ store }: { store: NoteStore }) {
     await refreshNotes()
     await openNote(note.id)
   }, [store, view, notebooks, refreshNotes, openNote])
+
+  // Share to Notes on the tablet: each share becomes a new note in the first notebook, opened right away.
+  const onShare = useRef<(share: Share) => void>(() => {})
+  onShare.current = (share) => {
+    const notebookId = notebooks[0]?.id
+    if (!notebookId) return
+    const firstLine = share.text.trim().split('\n')[0].slice(0, 80)
+    void (async () => {
+      const note = await store.createTextNote(notebookId, share.subject?.trim() || firstLine, share.text)
+      setView({ kind: 'all' })
+      await refreshNotes()
+      await refreshCounts()
+      await openNote(note.id)
+    })()
+  }
+  useEffect(() => {
+    if (!runningInCapacitor) return
+    let off = () => {}
+    let cancelled = false
+    void import('../platform/capacitor').then(({ onShared }) => {
+      if (!cancelled) off = onShared((share) => onShare.current(share))
+    })
+    return () => {
+      cancelled = true
+      off()
+    }
+  }, [])
 
   // Keep the list and the open note in step with edits without re-querying on every keystroke.
   const patchNote = useCallback(

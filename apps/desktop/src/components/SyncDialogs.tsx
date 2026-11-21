@@ -2,7 +2,8 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { runningInTauri } from '../platform'
 
-const DEFAULT_SERVER = 'http://localhost:5319'
+/** The local server while developing, the droplet in a release build. */
+const DEFAULT_SERVER = import.meta.env.DEV ? 'http://localhost:5319' : 'https://notes.tillmanjr.com'
 
 const errorText = (e: unknown) =>
   e instanceof TypeError ? 'Can’t reach the server. Check the address and that the server is running.' : e instanceof Error ? e.message : String(e)

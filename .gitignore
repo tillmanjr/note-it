@@ -26,3 +26,6 @@ id_ed25519*
 *.sql.gz
 *.backup
 *.bak
+# age keys and encrypted backups (docs/deploy.md)
+*.age
+notes_backup*

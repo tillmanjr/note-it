@@ -1,0 +1,10 @@
+[Unit]
+Description=Encrypted backup of the notes database and attachments
+After=postgresql.service
+Requires=postgresql.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/notes-backup
+Nice=10
+IOSchedulingClass=idle

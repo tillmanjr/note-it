@@ -1,0 +1,12 @@
+#!/bin/bash
+# Device administration on the droplet (docs/passkeys.md):
+#   sudo notes-admin pending | approve <code> | deny <code> | devices | revoke <device id>
+# Runs the admin CLI from the installed release as the `notes` user, which reaches the database over its socket.
+set -euo pipefail
+[ "$(id -u)" = 0 ] || { echo "notes-admin: run with sudo" >&2; exit 1; }
+set -a
+. /etc/notes/env
+set +a
+cd /var/lib/notes
+exec setpriv --reuid=notes --regid=notes --init-groups --no-new-privs --reset-env \
+  env DATABASE_URL="$DATABASE_URL" TZ=America/Los_Angeles /usr/bin/node /opt/notes/current/admin.mjs "$@"

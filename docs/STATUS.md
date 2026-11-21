@@ -59,12 +59,11 @@ Details are in [milestone-2.md](milestone-2.md); the overall plan is in [design.
 ## Next (not started; wait for the user's go-ahead)
 Now: more UI streamlining from the user.
 
-**Droplet is ready; next, on the user's go-ahead:**
-1. **Deploy** to the droplet (next script: Docker or native services, Caddy, secrets generated on the droplet). Domain: `notes.tillmanjr.com` (Cloudflare DNS, DNS-only records); passkeys are tied to it. Caddy for TLS, nightly dumps.
+**In progress: deploy (branch `deploy/server`, built on `feature/passkeys`).** Scripts, release workflow and runbook are done and tested in an Ubuntu 24.04 container; decisions and steps are in [deploy.md](deploy.md). Next: the user makes the backup key, merges, tags `server-v0.1.0`, runs `02-install.sh` and `notes-deploy` on the droplet, then joins the desktop to `https://notes.tillmanjr.com`.
 
 After that:
-2. **2d:** vault-encrypted note sections (one passphrase, in memory only, re-lock on timeout), including converting Evernote-encrypted blocks.
-3. **Milestone 3:** mobile (Capacitor, iOS and Android).
+1. **2d:** vault-encrypted note sections (one passphrase, in memory only, re-lock on timeout), including converting Evernote-encrypted blocks.
+2. **Milestone 3:** mobile (Capacitor, iOS and Android).
 
 ## How to run
 - Install gitleaks (`winget install Gitleaks.Gitleaks`); the pre-commit hook needs it.

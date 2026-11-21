@@ -1,0 +1,42 @@
+# The sync server (docs/deploy.md). Installed by deploy/02-install.sh; releases by notes-deploy.
+[Unit]
+Description=Notes sync server
+After=network-online.target postgresql.service
+Wants=network-online.target
+Requires=postgresql.service
+
+[Service]
+User=notes
+Group=notes
+EnvironmentFile=/etc/notes/env
+ExecStart=/usr/bin/node /opt/notes/current/main.mjs
+Restart=on-failure
+RestartSec=5
+
+# Sandboxing: the server can write only its blob directory, and sees nothing else of the system.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/notes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+CapabilityBoundingSet=
+AmbientCapabilities=
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

@@ -33,6 +33,10 @@ import {
 } from './passkey'
 import { BadRequest, hasNotes, sync } from './sync'
 
+/** Set by build.mjs for releases. */
+declare const __NOTES_VERSION__: string | undefined
+const VERSION = typeof __NOTES_VERSION__ === 'string' ? __NOTES_VERSION__ : 'dev'
+
 export interface AppOptions {
   pool: pg.Pool
   blobDir: string
@@ -105,7 +109,7 @@ export async function buildApp({ pool, blobDir, corsOrigins, passkey, trustProxy
     return reply.code(500).send({ error: 'The server hit an error. Try again.' })
   })
 
-  app.get('/health', async () => ({ ok: true }))
+  app.get('/health', async () => ({ ok: true, version: VERSION }))
 
   // ---------- Joining and signing in (passkeys; approval is admin.ts) ----------
 

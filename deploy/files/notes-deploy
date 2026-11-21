@@ -1,0 +1,82 @@
+#!/bin/bash
+# Installs a sync server release from GitHub (docs/deploy.md):
+#   sudo notes-deploy                  the newest server-v* release
+#   sudo notes-deploy server-v0.2.0    a specific one (also how to roll back)
+# Downloads the release and its SHA-256 file over HTTPS, checks the hash (and GitHub's own digest of the asset
+# when the API reports one), unpacks it under /opt/notes/releases, switches /opt/notes/current, restarts the
+# service and waits for /health. If the new version doesn't come up, it switches back.
+set -euo pipefail
+
+REPO=tillmanjr/note-it
+API="https://api.github.com/repos/$REPO"
+RELEASES=/opt/notes/releases
+CURRENT=/opt/notes/current
+KEEP=5
+
+die() { echo "notes-deploy: $*" >&2; exit 1; }
+[ "$(id -u)" = 0 ] || die "run with sudo"
+
+tag="${1:-}"
+if [ -z "$tag" ]; then
+  tag="$(curl -sSf "$API/releases?per_page=30" | jq -r '[.[] | select(.draft == false and (.tag_name | startswith("server-v")))][0].tag_name // empty')"
+  [ -n "$tag" ] || die "no server-v* release found"
+fi
+[[ "$tag" =~ ^server-v[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "not a server release tag: $tag"
+version="${tag#server-v}"
+name="notes-server-$version"
+
+release="$(curl -sSf "$API/releases/tags/$tag")" || die "no release $tag"
+asset_url() { jq -r --arg n "$1" '.assets[] | select(.name == $n) | .browser_download_url' <<<"$release"; }
+tarball_url="$(asset_url "$name.tar.gz")"
+sum_url="$(asset_url "$name.tar.gz.sha256")"
+[ -n "$tarball_url" ] && [ -n "$sum_url" ] || die "$tag is missing its files"
+
+work="$(mktemp -d)"
+trap 'rm -rf "$work"' EXIT
+curl -sSfL -o "$work/$name.tar.gz" "$tarball_url"
+curl -sSfL -o "$work/$name.tar.gz.sha256" "$sum_url"
+(cd "$work" && sha256sum -c --quiet "$name.tar.gz.sha256") || die "checksum mismatch, not installing"
+digest="$(jq -r --arg n "$name.tar.gz" '.assets[] | select(.name == $n) | .digest // empty' <<<"$release")"
+if [ -n "$digest" ]; then
+  [ "$digest" = "sha256:$(sha256sum "$work/$name.tar.gz" | cut -d' ' -f1)" ] || die "GitHub's digest doesn't match, not installing"
+fi
+
+target="$RELEASES/$version"
+if [ ! -d "$target" ]; then
+  tar -xzf "$work/$name.tar.gz" -C "$work"
+  [ -f "$work/$name/main.mjs" ] && [ -f "$work/$name/admin.mjs" ] || die "release is missing main.mjs or admin.mjs"
+  install -d -m 755 "$target"
+  install -m 644 "$work/$name"/* "$target"/
+fi
+
+previous="$(readlink -f "$CURRENT" 2>/dev/null || true)"
+ln -sfn "$target" "$CURRENT"
+systemctl restart notes-server
+
+healthy() {
+  for _ in $(seq 1 30); do
+    if curl -sSf http://127.0.0.1:5319/health 2>/dev/null | jq -e --arg v "$version" '.ok and .version == $v' >/dev/null; then
+      return 0
+    fi
+    sleep 1
+  done
+  return 1
+}
+
+if healthy; then
+  echo "Sync server $version is running."
+else
+  echo "notes-deploy: $version didn't come up; recent log:" >&2
+  journalctl -u notes-server -n 30 --no-pager >&2 || true
+  if [ -n "$previous" ] && [ "$previous" != "$target" ]; then
+    ln -sfn "$previous" "$CURRENT"
+    systemctl restart notes-server
+    echo "notes-deploy: switched back to $(basename "$previous")." >&2
+  fi
+  exit 1
+fi
+
+# Keep the newest few releases, and never the one running.
+ls -1t "$RELEASES" | tail -n +$((KEEP + 1)) | while read -r old; do
+  [ "$RELEASES/$old" = "$target" ] || rm -rf "${RELEASES:?}/$old"
+done

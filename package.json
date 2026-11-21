@@ -10,6 +10,7 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "desktop": "npm run tauri:dev -w @tdjr/desktop",
-    "server": "npm run dev -w @tdjr/server"
+    "server": "npm run dev -w @tdjr/server",
+    "backup:pull": "node deploy/pull-backups.mjs"
   }
 }

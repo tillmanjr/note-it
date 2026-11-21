@@ -40,6 +40,9 @@ Checkpoint: 2026-11-19.
 - **2c-2 passkeys (2026-11-20):** each device requests access with its own device-bound Windows Hello passkey, an admin approves it by match code (`notes-admin`, over SSH in production), and the app signs in once per launch (24 h session, in memory only). Design in [passkeys.md](passkeys.md).
   - 11 end-to-end tests pass, using a software authenticator: approval by code, denied/revoked/unknown devices, socket closing on revoke, forged/replayed/foreign signatures, session expiry, refusing synced passkeys.
   - Tested for real with Windows Hello (fingerprint): requested, approved, signed in, the user's notes synced (2026-11-20). Needed "Save passkeys to this Windows device" turned on (see passkeys.md, Windows setup).
+- **Deployed (2026-11-20):** sync server 0.1.0 runs on the droplet at https://notes.tillmanjr.com (native Postgres 16, Caddy, Node 24, sandboxed systemd service). Releases come from the Server release workflow and are installed with `sudo notes-deploy`. The desktop app is joined to it and synced. Nightly age-encrypted backups work, and `npm.cmd run backup:pull` copies them to `~/notes-backups`; decrypting with the PC's key was checked. Runbook in [deploy.md](deploy.md).
+  - First-install fixes are on `fix/caddy-log-owner`: validating the Caddyfile as root made the log file root-owned; `backup:pull` used `sftp -b`, which can't ask for the key passphrase.
+  - The dev build's Request access defaults to `http://localhost:5319`; type `https://notes.tillmanjr.com` to use the droplet. On this PC, use `npm.cmd` in Windows PowerShell 5.1 (its execution policy blocks `npm.ps1`).
 - **Credentials:** be aggressively careful from here on; rules in [deploy.md](deploy.md#credentials).
 
 Details are in [milestone-2.md](milestone-2.md); the overall plan is in [design.md](design.md).
@@ -59,9 +62,7 @@ Details are in [milestone-2.md](milestone-2.md); the overall plan is in [design.
 ## Next (not started; wait for the user's go-ahead)
 Now: more UI streamlining from the user.
 
-**In progress: deploy (branch `deploy/server`, built on `feature/passkeys`).** Scripts, release workflow and runbook are done and tested in an Ubuntu 24.04 container; decisions and steps are in [deploy.md](deploy.md). Next: the user makes the backup key, merges, tags `server-v0.1.0`, runs `02-install.sh` and `notes-deploy` on the droplet, then joins the desktop to `https://notes.tillmanjr.com`.
-
-After that:
+**Then, on the user's go-ahead:**
 1. **2d:** vault-encrypted note sections (one passphrase, in memory only, re-lock on timeout), including converting Evernote-encrypted blocks.
 2. **Milestone 3:** mobile (Capacitor, iOS and Android).
 

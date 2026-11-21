@@ -78,7 +78,9 @@ step "Caddy (TLS for notes.tillmanjr.com)"
   cat "$FILES/Caddyfile"
 } > /etc/caddy/Caddyfile
 install -d -m 755 -o caddy -g caddy /var/log/caddy
-caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+# Validate as caddy: validating opens the log file, which must not end up owned by root.
+runuser -u caddy -- caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+chown -R caddy:caddy /var/log/caddy
 systemctl enable caddy
 systemctl reload-or-restart caddy
 

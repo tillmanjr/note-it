@@ -1,0 +1,29 @@
+#!/bin/bash
+# Nightly encrypted backup (docs/deploy.md), run by notes-backup.timer before DigitalOcean's backup window:
+# the database (pg_dump custom format) and the attachment files, each encrypted to the age public key in
+# /etc/notes/backup-recipient.txt. Only the user's PC holds the matching private key, so nothing on the droplet
+# can read a backup. Keeps the newest 14 of each in /var/backups/notes; `npm run backup:pull` copies them home.
+set -euo pipefail
+
+OUT=/var/backups/notes
+RECIPIENT=/etc/notes/backup-recipient.txt
+KEEP=14
+stamp="$(date +%Y-%m-%d_%H%M)"
+
+[ -s "$RECIPIENT" ] || { echo "notes-backup: $RECIPIENT is missing" >&2; exit 1; }
+umask 027
+cd /
+install -d -m 750 -o root -g tillman "$OUT"
+
+db="$OUT/notes-db-$stamp.dump.age"
+blobs="$OUT/notes-blobs-$stamp.tar.age"
+runuser -u postgres -- pg_dump --format=custom --dbname=notes | age -R "$RECIPIENT" -o "$db.part"
+mv "$db.part" "$db"
+tar -C /var/lib/notes -cf - blobs | age -R "$RECIPIENT" -o "$blobs.part"
+mv "$blobs.part" "$blobs"
+chgrp tillman "$db" "$blobs"
+
+for kind in db blobs; do
+  ls -1t "$OUT"/notes-"$kind"-*.age 2>/dev/null | tail -n +$((KEEP + 1)) | xargs -r rm -f
+done
+echo "notes-backup: wrote $(basename "$db") and $(basename "$blobs")."

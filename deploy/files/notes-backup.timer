@@ -1,0 +1,12 @@
+# 23:15 Pacific (the droplet's time zone), before DigitalOcean's midnight–4:00 backup window, so each
+# whole-droplet backup also holds that night's encrypted dumps.
+[Unit]
+Description=Nightly notes backup
+
+[Timer]
+OnCalendar=*-*-* 23:15:00
+Persistent=true
+RandomizedDelaySec=5min
+
+[Install]
+WantedBy=timers.target

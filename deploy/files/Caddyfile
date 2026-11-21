@@ -1,0 +1,23 @@
+# TLS for notes.tillmanjr.com (Let's Encrypt, renewed by Caddy) in front of the sync server (docs/deploy.md).
+# 02-install.sh adds a global block with the ACME email when one is given.
+notes.tillmanjr.com {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+		-Server
+	}
+	# Just above the server's own limit (64 MB attachments), so oversized uploads stop here.
+	request_body {
+		max_size 65MB
+	}
+	reverse_proxy 127.0.0.1:5319
+	# Caddy redacts Authorization (the session token) and Cookie headers in logs unless log_credentials is set.
+	log {
+		output file /var/log/caddy/notes.log {
+			roll_size 20MiB
+			roll_keep 5
+		}
+	}
+}

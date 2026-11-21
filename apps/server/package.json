@@ -1,6 +1,6 @@
 {
   "name": "@tdjr/server",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,6 +8,7 @@
     "dev": "tsx watch src/main.ts",
     "start": "tsx src/main.ts",
     "admin": "tsx src/admin.ts",
+    "build": "node build.mjs",
     "typecheck": "tsc --noEmit -p .",
     "test": "vitest run"
   },

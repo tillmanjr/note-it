@@ -1,0 +1,60 @@
+# Builds a sync server release when a tag like server-v0.1.0 is pushed (docs/deploy.md). The droplet's
+# `notes-deploy` downloads the release and checks its SHA-256 before installing it.
+name: Server release
+on:
+  push:
+    tags: ['server-v*']
+permissions:
+  contents: read
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write # create the release
+    services:
+      postgres:
+        image: postgres:16 # what Ubuntu 24.04 on the droplet runs
+        env:
+          POSTGRES_USER: notes
+          POSTGRES_PASSWORD: notes # throwaway CI database
+          POSTGRES_DB: notes
+        ports: ['5320:5432']
+        options: >-
+          --health-cmd "pg_isready -U notes" --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+      - name: Install Node.js (pinned, checksum-verified)
+        env:
+          VERSION: 24.22.3
+          SHA256: 4f2b175a6d53a5c617a80dba2676238a0688cef28c6da4eba35c7d844e66fcfb
+        run: |
+          curl -sSfL -o node.tar.xz "https://nodejs.org/dist/v${VERSION}/node-v${VERSION}-linux-x64.tar.xz"
+          echo "${SHA256}  node.tar.xz" | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/node" && tar -xJf node.tar.xz -C "$RUNNER_TEMP/node" --strip-components=1
+          echo "$RUNNER_TEMP/node/bin" >> "$GITHUB_PATH"
+      - run: npm ci --ignore-scripts
+      - name: Check the tag matches the server's version
+        run: |
+          version="$(node -p "require('./apps/server/package.json').version")"
+          test "server-v${version}" = "$GITHUB_REF_NAME" || { echo "Tag $GITHUB_REF_NAME but apps/server is $version"; exit 1; }
+      - run: npm run typecheck -w @tdjr/server -w @tdjr/core
+      - name: Server tests (against the Postgres service)
+        run: npx vitest run apps/server
+      - name: Build and package
+        run: |
+          version="${GITHUB_REF_NAME#server-v}"
+          NOTES_VERSION="$version" npm run build -w @tdjr/server
+          name="notes-server-${version}"
+          mkdir "$name" && cp apps/server/dist/* "$name"/ && echo "$version" > "$name/VERSION"
+          tar -czf "$name.tar.gz" "$name"
+          sha256sum "$name.tar.gz" > "$name.tar.gz.sha256"
+          echo "NAME=$name" >> "$GITHUB_ENV"
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" "$NAME.tar.gz" "$NAME.tar.gz.sha256" \
+            --title "Sync server ${GITHUB_REF_NAME#server-v}" \
+            --notes "Install on the droplet with: sudo notes-deploy ${GITHUB_REF_NAME}"

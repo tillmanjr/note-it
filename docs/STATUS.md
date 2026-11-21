@@ -62,9 +62,7 @@ Details are in [milestone-2.md](milestone-2.md); the overall plan is in [design.
 ## Next (not started; wait for the user's go-ahead)
 Now: more UI streamlining from the user.
 
-**Next, on the user's go-ahead:**
-
-After that:
+**Then, on the user's go-ahead:**
 1. **2d:** vault-encrypted note sections (one passphrase, in memory only, re-lock on timeout), including converting Evernote-encrypted blocks.
 2. **Milestone 3:** mobile (Capacitor, iOS and Android).
 

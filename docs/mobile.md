@@ -28,3 +28,15 @@ The app answers the server in the WebAuthn format, like Windows Hello does, so *
 - `apps/desktop/src/platform/capacitor.ts`: SQLite (`@capacitor-community/sqlite`), attachment files (`@capacitor/filesystem`), the device key and incoming shares.
 - `apps/mobile`: the Capacitor project (Android), its Keystore plugin (Kotlin) and the share intent. Its web assets are the desktop build.
 - The server allows the app's origin (`https://localhost`) for CORS.
+
+## Build and install (Windows)
+
+1. Install Android Studio (`winget install Google.AndroidStudio`), open it once and accept the setup wizard (Android SDK).
+2. On the tablet: Settings → About → tap Build number 7 times; then Developer options → USB debugging on. Connect it by USB and allow this PC.
+3. `npm run sync -w @tdjr/mobile` builds the web UI and copies it into the Android project.
+4. `npm run open -w @tdjr/mobile` opens Android Studio; pick the tablet and press Run.
+5. In the app: ⚙ → Request access… with `https://notes.tillmanjr.com`, then `sudo notes-admin approve <CODE>` on the droplet. Sign-in asks for a fingerprint, face or the screen lock.
+
+The first builds are debug builds, signed with Android Studio's own debug key. A release signing key (kept on this PC and in 1Password, never in the repo) comes when the app is used day to day.
+
+**Server side:** the droplet must allow the app's origin, `https://localhost` (in `deploy/files/notes.env`). Copy `deploy/` again, rerun `sudo bash deploy/02-install.sh <age public key>`, then `sudo systemctl restart notes-server`.

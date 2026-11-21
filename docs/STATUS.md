@@ -65,8 +65,7 @@ Details are in [milestone-2.md](milestone-2.md); the overall plan is in [design.
 ## Next (not started; wait for the user's go-ahead)
 Now: more UI streamlining from the user.
 
-**Then, on the user's go-ahead:**
-1. **Milestone 3:** mobile (Capacitor, iOS and Android).
+**In progress: milestone 3, Android tablet (branch `feature/mobile`).** Design and build steps in [mobile.md](mobile.md). Done: device-key sign-in (Keystore key framed as a passkey, tested end to end against the server), Capacitor project with the Keystore and Share to Notes plugins, the tablet storage adapter, touch sizing. Next: the user installs Android Studio; then build, install over USB, and test on the tablet. Then iPhone.
 
 ## How to run
 - Install gitleaks (`winget install Gitleaks.Gitleaks`); the pre-commit hook needs it.

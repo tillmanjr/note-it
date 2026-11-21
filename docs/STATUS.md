@@ -36,6 +36,7 @@ Checkpoint: 2026-11-19.
 - **Repo:** pushed to https://github.com/tillmanjr/note-it on 2026-11-19. From then on, work goes on branches and PRs (the user opens PRs from the push link; git CLI, no gh).
 - **Droplet spec:** [recommended-droplet.md](recommended-droplet.md).
 - **Droplet up and hardened (2026-11-20):** `tdjr-notes`, DNS for `notes.tillmanjr.com` in place, cloud firewall, `deploy/01-harden.sh` run and verified (only `tillman` with the `notes_droplet` key gets in; root refused; kernel 6.8.0-151). Details in [deploy.md](deploy.md). Nothing app-related is installed yet.
+- **Leak scanning (2026-11-20):** gitleaks pre-commit hook plus a CI scan of the full history; history was clean when added.
 - **Credentials:** be aggressively careful from here on; rules in [deploy.md](deploy.md#credentials).
 
 Details are in [milestone-2.md](milestone-2.md); the overall plan is in [design.md](design.md).
@@ -64,6 +65,7 @@ After that:
 4. **Milestone 3:** mobile (Capacitor, iOS and Android).
 
 ## How to run
+- Install gitleaks (`winget install Gitleaks.Gitleaks`); the pre-commit hook needs it.
 - `npm install`, then `npm run desktop` starts the Tauri app (Vite on port 5318).
 - `npm run dev -w @tdjr/desktop` serves the same UI in a browser.
 - `npm test` and `npm run typecheck` check the code. The server's end-to-end tests need `npm run db:up -w @tdjr/server`; they're skipped otherwise.

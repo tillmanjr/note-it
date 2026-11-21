@@ -26,7 +26,7 @@ The app answers the server in the WebAuthn format, like Windows Hello does, so *
 
 - `packages/core/src/nativeKey.ts`: WebAuthn framing for a native key.
 - `apps/desktop/src/platform/capacitor.ts`: SQLite (`@capacitor-community/sqlite`), attachment files (`@capacitor/filesystem`), the device key and incoming shares.
-- `apps/mobile`: the Capacitor project (Android), its Keystore plugin (Kotlin) and the share intent. Its web assets are the desktop build.
+- `apps/mobile`: the Capacitor project (Android), its Keystore and share plugins (Java). Its web assets are the desktop build.
 - The server allows the app's origin (`https://localhost`) for CORS.
 
 ## Build and install (Windows)

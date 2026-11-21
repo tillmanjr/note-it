@@ -37,6 +37,9 @@ Checkpoint: 2026-11-19.
 - **Droplet spec:** [recommended-droplet.md](recommended-droplet.md).
 - **Droplet up and hardened (2026-11-20):** `tdjr-notes`, DNS for `notes.tillmanjr.com` in place, cloud firewall, `deploy/01-harden.sh` run and verified (only `tillman` with the `notes_droplet` key gets in; root refused; kernel 6.8.0-151). Details in [deploy.md](deploy.md). Nothing app-related is installed yet.
 - **Leak scanning (2026-11-20):** gitleaks pre-commit hook plus a CI scan of the full history; history was clean when added.
+- **2c-2 passkeys (2026-11-20):** each device requests access with its own device-bound Windows Hello passkey, an admin approves it by match code (`notes-admin`, over SSH in production), and the app signs in once per launch (24 h session, in memory only). Design in [passkeys.md](passkeys.md).
+  - 11 end-to-end tests pass, using a software authenticator: approval by code, denied/revoked/unknown devices, socket closing on revoke, forged/replayed/foreign signatures, session expiry, refusing synced passkeys.
+  - Tested for real with Windows Hello (fingerprint): requested, approved, signed in, the user's notes synced (2026-11-20). Needed "Save passkeys to this Windows device" turned on (see passkeys.md, Windows setup).
 - **Credentials:** be aggressively careful from here on; rules in [deploy.md](deploy.md#credentials).
 
 Details are in [milestone-2.md](milestone-2.md); the overall plan is in [design.md](design.md).
@@ -57,19 +60,18 @@ Details are in [milestone-2.md](milestone-2.md); the overall plan is in [design.
 Now: more UI streamlining from the user.
 
 **Droplet is ready; next, on the user's go-ahead:**
-1. **2c-2:** passkeys (sign-in through the system browser), with the device token in the OS keychain.
-2. **Deploy** to the droplet (next script: Docker or native services, Caddy, secrets generated on the droplet). Domain: `notes.tillmanjr.com` (Cloudflare DNS, DNS-only records); passkeys are tied to it. Caddy for TLS, nightly dumps.
+1. **Deploy** to the droplet (next script: Docker or native services, Caddy, secrets generated on the droplet). Domain: `notes.tillmanjr.com` (Cloudflare DNS, DNS-only records); passkeys are tied to it. Caddy for TLS, nightly dumps.
 
 After that:
-3. **2d:** vault-encrypted note sections (one passphrase, in memory only, re-lock on timeout), including converting Evernote-encrypted blocks.
-4. **Milestone 3:** mobile (Capacitor, iOS and Android).
+2. **2d:** vault-encrypted note sections (one passphrase, in memory only, re-lock on timeout), including converting Evernote-encrypted blocks.
+3. **Milestone 3:** mobile (Capacitor, iOS and Android).
 
 ## How to run
 - Install gitleaks (`winget install Gitleaks.Gitleaks`); the pre-commit hook needs it.
 - `npm install`, then `npm run desktop` starts the Tauri app (Vite on port 5318).
 - `npm run dev -w @tdjr/desktop` serves the same UI in a browser.
 - `npm test` and `npm run typecheck` check the code. The server's end-to-end tests need `npm run db:up -w @tdjr/server`; they're skipped otherwise.
-- Sync server: `npm run db:up -w @tdjr/server` (Postgres on 127.0.0.1:5320), then `npm run server` (http://localhost:5319, prints a setup code).
+- Sync server: `npm run db:up -w @tdjr/server` (Postgres on 127.0.0.1:5320), then `npm run server` (http://localhost:5319). Approve devices with `npm run admin -w @tdjr/server -- pending` / `approve <CODE>`.
 - **Don't add vitest or `@tdjr/core` to `apps/server/package.json`.** npm 11 then drops rolldown's native bindings from the lockfile and breaks Vite and Vitest. The server uses the root vitest and the workspace link instead.
 - **Real-export check** (git-ignored, prints counts only):
   - Run from `packages/enex`: `ENEX_DIR=../../../evernoteExports2026.11.17 npx vitest run real-exports --disableConsoleIntercept`.

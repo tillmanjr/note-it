@@ -5,7 +5,7 @@ import { NoteEditor } from './NoteEditor'
 import { SearchOverlay, type SearchScope } from './SearchOverlay'
 import { ImportDialog } from './ImportDialog'
 import { NotesAboveEditor, NotesSection, useNotesPlacement } from './NotesSection'
-import { AddDeviceDialog, ConnectDialog, DevicesDialog } from './SyncDialogs'
+import { DisconnectDialog, RequestAccessDialog, WaitingDialog } from './SyncDialogs'
 import { useSync } from '../sync'
 
 const LAST_NOTE_KEY = 'tdjr.lastNoteByView'
@@ -46,7 +46,7 @@ export function Workspace({ store }: { store: NoteStore }) {
   const [importOpen, setImportOpen] = useState(false)
   const [notesPlacement, setNotesPlacement] = useNotesPlacement()
   const sync = useSync(store)
-  const [syncDialog, setSyncDialog] = useState<'connect' | 'add' | 'devices' | null>(null)
+  const [syncDialog, setSyncDialog] = useState<'request' | 'waiting' | 'disconnect' | null>(null)
 
   // Note counts beside notebooks and tags; refreshed whenever notes or the organization change.
   const refreshCounts = useCallback(async () => setCounts(await store.noteCounts()), [store])
@@ -232,11 +232,13 @@ export function Workspace({ store }: { store: NoteStore }) {
         onSearch={() => setSearchOpen(true)}
         onImport={() => setImportOpen(true)}
         sync={{
+          access: sync.access,
           status: sync.status,
-          onConnect: () => setSyncDialog('connect'),
+          onRequest: () => setSyncDialog('request'),
+          onWaiting: () => setSyncDialog('waiting'),
+          onSignIn: sync.signIn,
           onSyncNow: () => void sync.client?.syncNow(),
-          onAddDevice: () => setSyncDialog('add'),
-          onDevices: () => setSyncDialog('devices'),
+          onDisconnect: () => setSyncDialog('disconnect'),
         }}
         onChanged={async () => {
           await refreshOrganization()
@@ -278,10 +280,25 @@ export function Workspace({ store }: { store: NoteStore }) {
           }}
         />
       )}
-      {syncDialog === 'connect' && <ConnectDialog onConnect={sync.connect} onClose={() => setSyncDialog(null)} />}
-      {syncDialog === 'add' && sync.client && <AddDeviceDialog client={sync.client} onClose={() => setSyncDialog(null)} />}
-      {syncDialog === 'devices' && sync.client && (
-        <DevicesDialog client={sync.client} onDisconnectThis={sync.disconnect} onClose={() => setSyncDialog(null)} />
+      {syncDialog === 'request' && (
+        <RequestAccessDialog
+          onRequest={async (serverUrl, deviceName) => {
+            await sync.request(serverUrl, deviceName)
+            setSyncDialog('waiting')
+          }}
+          onClose={() => setSyncDialog((d) => (d === 'request' ? null : d))}
+        />
+      )}
+      {syncDialog === 'waiting' && sync.access.phase === 'waiting' && (
+        <WaitingDialog
+          serverUrl={sync.access.config.serverUrl}
+          matchCode={sync.access.matchCode}
+          onCheck={sync.signIn}
+          onClose={() => setSyncDialog(null)}
+        />
+      )}
+      {syncDialog === 'disconnect' && 'config' in sync.access && (
+        <DisconnectDialog deviceId={sync.access.config.deviceId} onDisconnect={sync.disconnect} onClose={() => setSyncDialog(null)} />
       )}
       {searchOpen && (
         <SearchOverlay

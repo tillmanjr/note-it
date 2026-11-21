@@ -1,10 +1,16 @@
 import type { NoteStore } from './store'
 import type {
-  DeviceCode,
-  DeviceInfo,
-  EnrollRequest,
-  EnrollResponse,
+  AccessRequest,
+  AccessRequestStarted,
+  AccessRequestState,
+  AccessStatus,
+  PasskeyAssertion,
+  PasskeyCreateOptions,
+  PasskeyCreated,
+  PasskeyGetOptions,
   RecordChange,
+  Session,
+  SessionRequest,
   SocketMessage,
   SyncRequest,
   SyncResponse,
@@ -13,8 +19,13 @@ import type {
 // Talks to the sync server: push local changes, pull everyone else's, move attachment files, and stay current
 // through a WebSocket that only says "something changed". Works offline: changes queue in the ledger and go
 // out on the next successful sync.
+//
+// Joining and signing in use this device's own passkey (docs/passkeys.md). The session token from signing in
+// lives only in memory; nothing reusable is written to disk.
 
-const META = { server: 'server_url', device: 'device_id', token: 'device_token', name: 'device_name', cursor: 'cursor' }
+const META = { server: 'server_url', device: 'device_id', name: 'device_name', cursor: 'cursor', joined: 'joined' }
+/** Written by versions that joined with codes; deleted on sight. */
+const LEGACY_TOKEN_KEY = 'device_token'
 const RECORDS_PER_PUSH = 500
 const BODIES_PER_PUSH = 50
 const BLOBS_PER_PASS = 20
@@ -24,12 +35,20 @@ const FALLBACK_SYNC_MS = 5 * 60_000
 
 export interface SyncConfig {
   serverUrl: string
+  /** Also the access request's id. */
   deviceId: string
   deviceName: string
-  token: string
 }
 
-export type SyncState = 'idle' | 'syncing' | 'offline' | 'error'
+/** Creates and uses this device's passkey: Windows Hello through Tauri, or navigator.credentials in a browser. */
+export interface Passkeys {
+  /** `origin` is the server's origin, which native authenticators put in the client data. Browsers use the page's. */
+  create(options: PasskeyCreateOptions, origin: string): Promise<PasskeyCreated>
+  get(options: PasskeyGetOptions, origin: string): Promise<PasskeyAssertion>
+}
+
+/** `signed-out`: the session expired or the device was revoked; sign in again (or request access again). */
+export type SyncState = 'idle' | 'syncing' | 'offline' | 'error' | 'signed-out'
 
 export interface SyncStatus {
   state: SyncState
@@ -40,9 +59,12 @@ export interface SyncStatus {
 
 export class SyncHttpError extends Error {
   readonly status: number
-  constructor(status: number, message: string) {
+  /** Why the server refused this device, when it did (403/404 from the join and sign-in routes). */
+  readonly refused: AccessStatus | 'unknown' | undefined
+  constructor(status: number, message: string, refused?: AccessStatus | 'unknown') {
     super(message)
     this.status = status
+    this.refused = refused
   }
 }
 
@@ -56,57 +78,96 @@ async function call<T>(fetchFn: Fetch, url: string, init: RequestInit & { token?
   if (init.json !== undefined) headers['content-type'] = 'application/json'
   const res = await fetchFn(url, { ...init, headers: { ...headers, ...(init.headers as Record<string, string>) }, body: init.json !== undefined ? JSON.stringify(init.json) : init.body })
   if (!res.ok) {
-    const body = (await res.json().catch(() => null)) as { error?: string } | null
-    throw new SyncHttpError(res.status, body?.error ?? `The server answered ${res.status}.`)
+    const body = (await res.json().catch(() => null)) as { error?: string; status?: AccessStatus | 'unknown' } | null
+    throw new SyncHttpError(res.status, body?.error ?? `The server answered ${res.status}.`, body?.status)
   }
   return (res.status === 204 ? undefined : await res.json()) as T
 }
 
-/** The saved connection, or null when this device isn't connected to a server. */
+/** The saved connection (possibly still waiting for approval), or null when this device hasn't asked to join. */
 export async function loadSyncConfig(store: NoteStore): Promise<SyncConfig | null> {
-  const [serverUrl, deviceId, token, deviceName] = await Promise.all([
+  await store.ledger.deleteMeta(LEGACY_TOKEN_KEY)
+  const [serverUrl, deviceId, deviceName] = await Promise.all([
     store.ledger.getMeta(META.server),
     store.ledger.getMeta(META.device),
-    store.ledger.getMeta(META.token),
     store.ledger.getMeta(META.name),
   ])
-  return serverUrl && deviceId && token ? { serverUrl, deviceId, token, deviceName: deviceName ?? '' } : null
+  return serverUrl && deviceId ? { serverUrl, deviceId, deviceName: deviceName ?? '' } : null
+}
+
+const originOf = (serverUrl: string) => new URL(serverUrl).origin
+
+/**
+ * Asks to join: creates this device's passkey and sends its public half. The device then waits for an admin to
+ * approve the request on the server, by the match code returned here.
+ */
+export async function requestAccess(
+  store: NoteStore,
+  serverUrl: string,
+  deviceName: string,
+  passkeys: Passkeys,
+  fetchFn: Fetch = fetch,
+): Promise<{ config: SyncConfig; state: AccessRequestState }> {
+  const url = normalizeUrl(serverUrl)
+  const req: AccessRequest = { deviceName: deviceName.trim() || 'Device' }
+  const started = await call<AccessRequestStarted>(fetchFn, `${url}/devices/request`, { method: 'POST', json: req })
+  const created = await passkeys.create(started.options, originOf(url))
+  const state = await call<AccessRequestState>(fetchFn, `${url}/devices/request/${started.requestId}/credential`, {
+    method: 'POST',
+    json: created,
+  })
+  await forgetSyncConfig(store)
+  await store.ledger.setMeta(META.server, url)
+  await store.ledger.setMeta(META.device, started.requestId)
+  await store.ledger.setMeta(META.name, req.deviceName)
+  return { config: { serverUrl: url, deviceId: started.requestId, deviceName: req.deviceName }, state }
+}
+
+export type Refused = { status: AccessStatus | 'unknown'; message: string }
+
+/** Where this device's request stands. A refusal (denied, revoked, expired, unknown) comes back as a state too. */
+export async function accessState(config: SyncConfig, fetchFn: Fetch = fetch): Promise<AccessRequestState | Refused> {
+  try {
+    return await call<AccessRequestState>(fetchFn, `${config.serverUrl}/devices/request/${config.deviceId}`)
+  } catch (err) {
+    if (err instanceof SyncHttpError && err.refused) return { status: err.refused, message: err.message }
+    throw err
+  }
 }
 
 /**
- * Connects this device with a one-time code. If the server already has notes and this device has none, the
- * device's starter data (an empty notebook) is dropped so it doesn't duplicate; otherwise everything here is
- * queued for upload and merges with the server.
+ * Signs in with this device's passkey and returns a session for SyncClient. The challenge is fetched first,
+ * so an unreachable server never shows a passkey prompt. The first sign-in after approval joins the device:
+ * if the server already has notes and this device has none, its starter data is dropped so it doesn't
+ * duplicate; otherwise everything here is queued for upload and merges with the server.
  */
-export async function enrollDevice(
-  store: NoteStore,
-  serverUrl: string,
-  code: string,
-  deviceName: string,
-  fetchFn: Fetch = fetch,
-): Promise<SyncConfig> {
-  const url = normalizeUrl(serverUrl)
-  const req: EnrollRequest = { code: code.trim(), deviceName: deviceName.trim() || 'Device' }
-  const res = await call<EnrollResponse>(fetchFn, `${url}/enroll`, { method: 'POST', json: req })
-  if (res.serverHasData && !(await store.ledger.hasNotes())) await store.ledger.resetLocalData()
-  else await store.ledger.seedAll()
-  await store.ledger.setMeta(META.server, url)
-  await store.ledger.setMeta(META.device, res.deviceId)
-  await store.ledger.setMeta(META.token, res.token)
-  await store.ledger.setMeta(META.name, req.deviceName)
-  await store.ledger.setMeta(META.cursor, '0')
-  store.emit({ type: 'remote', metadata: true, purged: [], bodies: new Map() })
-  return { serverUrl: url, deviceId: res.deviceId, token: res.token, deviceName: req.deviceName }
+export async function signIn(store: NoteStore, config: SyncConfig, passkeys: Passkeys, fetchFn: Fetch = fetch): Promise<Session> {
+  const options = await call<PasskeyGetOptions>(fetchFn, `${config.serverUrl}/auth/challenge`, {
+    method: 'POST',
+    json: { deviceId: config.deviceId },
+  })
+  const assertion = await passkeys.get(options, originOf(config.serverUrl))
+  const req: SessionRequest = { deviceId: config.deviceId, assertion }
+  const session = await call<Session>(fetchFn, `${config.serverUrl}/auth/session`, { method: 'POST', json: req })
+  if ((await store.ledger.getMeta(META.joined)) !== config.deviceId) {
+    if (session.serverHasData && !(await store.ledger.hasNotes())) await store.ledger.resetLocalData()
+    else await store.ledger.seedAll()
+    await store.ledger.setMeta(META.cursor, '0')
+    await store.ledger.setMeta(META.joined, config.deviceId)
+    store.emit({ type: 'remote', metadata: true, purged: [], bodies: new Map() })
+  }
+  return session
 }
 
 /** Forgets the server connection. Notes stay on this device. */
 export async function forgetSyncConfig(store: NoteStore): Promise<void> {
-  for (const key of Object.values(META)) await store.ledger.deleteMeta(key)
+  for (const key of [...Object.values(META), LEGACY_TOKEN_KEY]) await store.ledger.deleteMeta(key)
 }
 
 export class SyncClient {
   private readonly store: NoteStore
   readonly config: SyncConfig
+  private readonly token: string
   private readonly fetchFn: Fetch
   private readonly WebSocketImpl: typeof WebSocket | undefined
   private readonly debounceMs: number
@@ -125,10 +186,12 @@ export class SyncClient {
   constructor(
     store: NoteStore,
     config: SyncConfig,
+    session: Pick<Session, 'token'>,
     opts: { fetch?: Fetch; WebSocket?: typeof WebSocket; debounceMs?: number } = {},
   ) {
     this.store = store
     this.config = config
+    this.token = session.token
     this.fetchFn = opts.fetch ?? ((input, init) => fetch(input, init))
     this.WebSocketImpl = opts.WebSocket ?? (typeof WebSocket === 'undefined' ? undefined : WebSocket)
     this.debounceMs = opts.debounceMs ?? 800
@@ -175,20 +238,6 @@ export class SyncClient {
     return this.running
   }
 
-  // ---------- Devices ----------
-
-  createDeviceCode(): Promise<DeviceCode> {
-    return this.api<DeviceCode>('/devices/code', { method: 'POST' })
-  }
-
-  listDevices(): Promise<DeviceInfo[]> {
-    return this.api<DeviceInfo[]>('/devices')
-  }
-
-  revokeDevice(id: string): Promise<void> {
-    return this.api<void>(`/devices/${encodeURIComponent(id)}`, { method: 'DELETE' })
-  }
-
   // ---------- Internals ----------
 
   private schedule(delay: number) {
@@ -203,7 +252,7 @@ export class SyncClient {
   }
 
   private api<T>(path: string, init: RequestInit & { json?: unknown } = {}): Promise<T> {
-    return call<T>(this.fetchFn, `${this.config.serverUrl}${path}`, { ...init, token: this.config.token })
+    return call<T>(this.fetchFn, `${this.config.serverUrl}${path}`, { ...init, token: this.token })
   }
 
   private async run(): Promise<void> {
@@ -218,7 +267,7 @@ export class SyncClient {
       this.setStatus({ state: 'idle', lastSyncAt: Date.now(), error: null })
     } catch (err) {
       if (err instanceof SyncHttpError && err.status === 401) {
-        this.setStatus({ state: 'error', error: 'This device is no longer connected to the server. Connect it again from ⚙.' })
+        this.setStatus({ state: 'signed-out', error: 'Signed out of the server. Sign in again from ⚙.' })
         this.stop()
         return
       }
@@ -271,7 +320,7 @@ export class SyncClient {
     const { ledger } = this.store
     for (const hash of await ledger.missingBlobs(BLOBS_PER_PASS)) {
       const res = await this.fetchFn(`${this.config.serverUrl}/blobs/${hash}`, {
-        headers: { authorization: `Bearer ${this.config.token}` },
+        headers: { authorization: `Bearer ${this.token}` },
       })
       if (res.status === 404) continue
       if (!res.ok) throw new SyncHttpError(res.status, `Downloading an attachment failed (${res.status}).`)
@@ -284,7 +333,7 @@ export class SyncClient {
     if (!this.started || !this.WebSocketImpl) return
     const ws = new this.WebSocketImpl(`${this.config.serverUrl.replace(/^http/, 'ws')}/events`)
     this.socket = ws
-    ws.onopen = () => ws.send(JSON.stringify({ type: 'auth', token: this.config.token } satisfies SocketMessage))
+    ws.onopen = () => ws.send(JSON.stringify({ type: 'auth', token: this.token } satisfies SocketMessage))
     ws.onmessage = (ev) => {
       const msg = JSON.parse(String(ev.data)) as SocketMessage
       if (msg.type === 'ready') {

@@ -573,14 +573,7 @@ button.primary.danger { background: var(--danger); border-color: var(--danger); 
   background: var(--panel);
   user-select: all;
 }
-.device-list { list-style: none; margin: 0; padding: 0; }
-.device-list li { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--border); font-size: 13px; }
-.device-list li:first-child { border-top: none; }
-.device-name { flex: 1; min-width: 0; font-weight: 600; }
-.device-name .badge { margin-left: 8px; font-size: 11px; font-weight: 500; color: var(--muted); }
-.device-seen { font-size: 12px; color: var(--muted); }
-.device-list button { border: 1px solid var(--border); background: var(--raised); border-radius: 6px; padding: 2px 10px; cursor: pointer; }
-.device-list button.danger { border-color: var(--danger); color: var(--danger); }
+.sync-dialog-body code { font: 12.5px ui-monospace, 'Cascadia Mono', Consolas, monospace; user-select: all; }
 
 /* ---------- Hover: anything that can be invoked changes slightly under the pointer ---------- */
 /* Informational text (edited time, counts) stays still, so a change on hover always means "clickable". */
@@ -588,15 +581,13 @@ button.primary.danger { background: var(--danger); border-color: var(--danger); 
 .note-footer select:hover:not(:disabled),
 .trash-bar button:hover,
 .dialog footer button:not(.primary):hover:not(:disabled),
-.device-list button:hover,
 .search-button:hover {
   background: var(--hover);
   border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
   color: var(--text);
 }
 .note-footer button.danger:hover,
-.trash-bar button.danger:hover,
-.device-list button.danger:hover { border-color: var(--danger); color: var(--danger); }
+.trash-bar button.danger:hover { border-color: var(--danger); color: var(--danger); }
 .search-scope button:hover:not(.active) { border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); color: var(--text); }
 button.primary:hover:not(:disabled) { filter: brightness(1.08); }
 .tag-chip button:hover { color: var(--text); background: color-mix(in srgb, var(--text) 14%, transparent); border-radius: 50%; }

@@ -7,25 +7,41 @@ import websocket from '@fastify/websocket'
 import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify'
 import type pg from 'pg'
 import type { WebSocket } from 'ws'
-import { ulid } from 'ulid'
-import type { DeviceInfo, EnrollRequest, EnrollResponse, SocketMessage, SyncRequest } from '@tdjr/core'
+import type {
+  AccessRequest,
+  PasskeyCreated,
+  Session,
+  SessionRequest,
+  SignInRequest,
+  SocketMessage,
+  SyncRequest,
+} from '@tdjr/core'
 import {
   AttemptLimiter,
-  DEVICE_CODE_TTL_MS,
-  createEnrollCode,
+  MAX_WAITING_REQUESTS,
   deviceForToken,
-  newToken,
-  normalizeCode,
-  sha256,
+  finishRequest,
+  finishSignIn,
+  liveTokenHashes,
+  requestState,
+  startRequest,
+  startSignIn,
+  waitingRequestCount,
   type Device,
-} from './auth'
-import { transaction } from './db'
+  type PasskeyConfig,
+  type Refusal,
+} from './passkey'
 import { BadRequest, hasNotes, sync } from './sync'
 
 export interface AppOptions {
   pool: pg.Pool
   blobDir: string
   corsOrigins: string[]
+  passkey: PasskeyConfig
+  /** Behind a reverse proxy (Caddy), take the client address from X-Forwarded-For. */
+  trustProxy?: boolean
+  /** How often open sockets are checked against their sessions (tests shorten it). */
+  socketCheckMs?: number
   logger?: boolean
 }
 
@@ -40,9 +56,11 @@ declare module 'fastify' {
   }
 }
 
-export async function buildApp({ pool, blobDir, corsOrigins, logger = false }: AppOptions) {
+const isRefusal = (r: object): r is Refusal => 'refused' in r
+
+export async function buildApp({ pool, blobDir, corsOrigins, passkey, trustProxy = false, socketCheckMs = 15_000, logger = false }: AppOptions) {
   await mkdir(blobDir, { recursive: true })
-  const app = Fastify({ logger, bodyLimit: 32 * MB })
+  const app = Fastify({ logger, bodyLimit: 32 * MB, trustProxy })
   await app.register(cors, { origin: corsOrigins, methods: ['GET', 'POST', 'PUT', 'DELETE'] })
   await app.register(websocket)
   app.addContentTypeParser('application/octet-stream', { parseAs: 'buffer', bodyLimit: 64 * MB }, (_req, body, done) =>
@@ -50,19 +68,34 @@ export async function buildApp({ pool, blobDir, corsOrigins, logger = false }: A
   )
   app.decorateRequest('device', null as unknown as Device)
 
-  const limiter = new AttemptLimiter()
-  /** Open event sockets, by device, for "something changed" nudges. */
-  const sockets = new Map<WebSocket, string>()
+  /** Failed sign-ins per address. */
+  const signInLimiter = new AttemptLimiter()
+  /** New access requests per address (each counts). */
+  const requestLimiter = new AttemptLimiter(10, 60 * 60_000)
+  /** Open event sockets, with their device and session, for "something changed" nudges. */
+  const sockets = new Map<WebSocket, Device>()
   const notifyOthers = (deviceId: string) => {
     const msg = JSON.stringify({ type: 'changed' } satisfies SocketMessage)
-    for (const [ws, id] of sockets) if (id !== deviceId && ws.readyState === ws.OPEN) ws.send(msg)
+    for (const [ws, d] of sockets) if (d.id !== deviceId && ws.readyState === ws.OPEN) ws.send(msg)
   }
+  // Revocation happens in another process (admin.ts), so open sockets are checked against the database now
+  // and then; expired or revoked ones are closed.
+  const socketCheck = setInterval(() => {
+    const open = [...sockets]
+    liveTokenHashes(pool, open.map(([, d]) => d.tokenHash)).then(
+      (live) => open.forEach(([ws, d]) => !live.has(d.tokenHash) && ws.close()),
+      (err: unknown) => app.log.error(err),
+    )
+  }, socketCheckMs)
+  app.addHook('onClose', async () => clearInterval(socketCheck))
 
   const requireDevice = async (req: FastifyRequest, reply: FastifyReply) => {
     const device = await deviceForToken(pool, req.headers.authorization)
-    if (!device) return reply.code(401).send({ error: 'This device is not connected. Connect it again with a new code.' })
+    if (!device) return reply.code(401).send({ error: 'This device is signed out. Sign in again.' })
     req.device = device
   }
+  const refused = (reply: FastifyReply, r: Refusal) =>
+    reply.code(r.refused === 'unknown' ? 404 : 403).send({ error: r.message, status: r.refused })
 
   app.setErrorHandler((err, req, reply) => {
     if (err instanceof BadRequest) return reply.code(400).send({ error: err.message })
@@ -74,55 +107,43 @@ export async function buildApp({ pool, blobDir, corsOrigins, logger = false }: A
 
   app.get('/health', async () => ({ ok: true }))
 
-  // ---------- Devices ----------
+  // ---------- Joining and signing in (passkeys; approval is admin.ts) ----------
 
-  app.post<{ Body: EnrollRequest }>('/enroll', async (req, reply) => {
-    if (limiter.blocked(req.ip)) return reply.code(429).send({ error: 'Too many wrong codes. Wait a minute and try again.' })
-    const code = normalizeCode(String(req.body?.code ?? ''))
-    const name = String(req.body?.deviceName ?? '').trim().slice(0, 60) || 'Device'
-    const token = newToken()
-    const deviceId = await transaction(pool, async (db) => {
-      const now = Date.now()
-      const { rowCount } = await db.query(
-        'UPDATE enroll_code SET used_at = $2 WHERE code_hash = $1 AND used_at IS NULL AND expires_at > $2',
-        [sha256(code), now],
-      )
-      if (!rowCount) return null
-      const id = ulid()
-      await db.query('INSERT INTO device (id, name, token_hash, created_at) VALUES ($1, $2, $3, $4)', [id, name, sha256(token), now])
-      return id
-    })
-    if (!deviceId) {
-      limiter.fail(req.ip)
-      return reply.code(400).send({ error: 'That code is wrong or has expired. Get a new one and try again.' })
+  app.post<{ Body: AccessRequest }>('/devices/request', async (req, reply) => {
+    if (requestLimiter.blocked(req.ip)) return reply.code(429).send({ error: 'Too many requests. Try again later.' })
+    requestLimiter.fail(req.ip)
+    if ((await waitingRequestCount(pool)) >= MAX_WAITING_REQUESTS) {
+      return reply.code(429).send({ error: 'Too many requests are waiting for approval. Try again later.' })
     }
-    const res: EnrollResponse = { deviceId, token, serverHasData: await hasNotes(pool) }
-    return res
+    return startRequest(pool, passkey, String(req.body?.deviceName ?? ''))
   })
 
-  app.post('/devices/code', { preHandler: requireDevice }, async (req) =>
-    createEnrollCode(pool, { createdBy: req.device.id, ttlMs: DEVICE_CODE_TTL_MS }),
-  )
-
-  app.get('/devices', { preHandler: requireDevice }, async (req) => {
-    const { rows } = await pool.query<{ id: string; name: string; created_at: string; last_seen_at: string | null }>(
-      'SELECT id, name, created_at, last_seen_at FROM device WHERE revoked_at IS NULL ORDER BY created_at',
-    )
-    return rows.map(
-      (r): DeviceInfo => ({
-        id: r.id,
-        name: r.name,
-        createdAt: Number(r.created_at),
-        lastSeenAt: r.last_seen_at === null ? null : Number(r.last_seen_at),
-        current: r.id === req.device.id,
-      }),
-    )
+  app.post<{ Params: { id: string }; Body: PasskeyCreated }>('/devices/request/:id/credential', async (req, reply) => {
+    if (!req.body?.credentialId) return reply.code(400).send({ error: 'Send the new passkey.' })
+    const result = await finishRequest(pool, passkey, req.params.id, req.body)
+    return isRefusal(result) ? refused(reply, result) : result
   })
 
-  app.delete<{ Params: { id: string } }>('/devices/:id', { preHandler: requireDevice }, async (req, reply) => {
-    await pool.query('UPDATE device SET revoked_at = $2 WHERE id = $1 AND revoked_at IS NULL', [req.params.id, Date.now()])
-    for (const [ws, id] of sockets) if (id === req.params.id) ws.close()
-    return reply.code(204).send()
+  app.get<{ Params: { id: string } }>('/devices/request/:id', async (req, reply) => {
+    const result = await requestState(pool, req.params.id)
+    return isRefusal(result) ? refused(reply, result) : result
+  })
+
+  app.post<{ Body: SignInRequest }>('/auth/challenge', async (req, reply) => {
+    const result = await startSignIn(pool, passkey, String(req.body?.deviceId ?? ''))
+    return isRefusal(result) ? refused(reply, result) : result
+  })
+
+  app.post<{ Body: SessionRequest }>('/auth/session', async (req, reply) => {
+    if (signInLimiter.blocked(req.ip)) return reply.code(429).send({ error: 'Too many failed sign-ins. Wait a minute.' })
+    if (!req.body?.assertion?.credentialId) return reply.code(400).send({ error: 'Send the passkey response.' })
+    const result = await finishSignIn(pool, passkey, String(req.body.deviceId ?? ''), req.body.assertion)
+    if (isRefusal(result)) {
+      signInLimiter.fail(req.ip)
+      return refused(reply, result)
+    }
+    const session: Session = { ...result, serverHasData: await hasNotes(pool) }
+    return session
   })
 
   // ---------- Sync ----------
@@ -180,7 +201,7 @@ export async function buildApp({ pool, blobDir, corsOrigins, logger = false }: A
       const device = msg.type === 'auth' ? await deviceForToken(pool, `Bearer ${msg.token}`) : null
       clearTimeout(timeout)
       if (!device) return socket.close()
-      sockets.set(socket, device.id)
+      sockets.set(socket, device)
       socket.send(JSON.stringify({ type: 'ready' } satisfies SocketMessage))
     })
     socket.on('close', () => {

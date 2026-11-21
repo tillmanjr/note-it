@@ -1,0 +1,7 @@
+#!/bin/sh
+# Blocks commits that contain secrets. `npm install` points git at this folder.
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "pre-commit: gitleaks not found. Install it (winget install Gitleaks.Gitleaks), then commit again." >&2
+  exit 1
+fi
+exec gitleaks git --pre-commit --staged --redact --no-banner --verbose .

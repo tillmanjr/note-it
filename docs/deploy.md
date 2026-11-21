@@ -22,6 +22,7 @@ If the home IP changes, SSH is blocked. Use the droplet's **Recovery Console** i
 
 - No secret goes in the repo, a chat, a URL or a log. Server secrets are generated on the droplet and live in root-owned `600` files.
 - `notes_droplet` is used only for this droplet. Only its `.pub` half leaves the PC.
+- **Leak scanning:** a gitleaks pre-commit hook (`.githooks/`, switched on by `npm install`) blocks commits with secrets, and the Secret scan workflow checks the full history on every push and PR. gitleaks must be installed locally (`winget install Gitleaks.Gitleaks`) or the hook refuses to commit. `apps/server/.env.example` lists the server's settings by name only.
 - The sudo password for `tillman` is set on the droplet and kept in a password manager. SSH never accepts passwords.
 
 ## 1. Harden (once)

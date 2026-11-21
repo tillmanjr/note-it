@@ -9,3 +9,20 @@ dist/
 
 # Sync server local data (attachment files)
 apps/server/data/
+
+# Secrets and key material: never commit
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa*
+id_ecdsa*
+id_ed25519*
+*_droplet
+*_droplet.pub
+# Database dumps and backups
+*.dump
+*.sql.gz
+*.backup
+*.bak

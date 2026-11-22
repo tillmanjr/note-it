@@ -12,6 +12,20 @@ export function cleanTagName(name: string): string {
   return name.replace(/^[\s+]+/, '').trim()
 }
 
+/** Splits a path like "projects/house" into cleaned levels. A leading "#" is a prompt; empty levels are dropped. */
+export function splitTagPath(path: string): string[] {
+  return path
+    .replace(/^[\s#]+/, '')
+    .split('/')
+    .map(cleanTagName)
+    .filter(Boolean)
+}
+
+/** Tag names compare case-insensitively ("Projects" and "projects" are the same tag). */
+export function sameTagName(a: string, b: string): boolean {
+  return a.localeCompare(b, undefined, { sensitivity: 'base' }) === 0
+}
+
 const byName =(a: TagNode, b: TagNode) => a.tag.name.localeCompare(b.tag.name, undefined, { sensitivity: 'base' })
 
 /** Live tags as a sorted forest. Tags whose parent is missing or deleted become roots. */

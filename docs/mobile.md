@@ -32,10 +32,15 @@ The app answers the server in the WebAuthn format, like Windows Hello does, so *
 ## Build and install (Windows)
 
 1. Install Android Studio (`winget install Google.AndroidStudio`), open it once and accept the setup wizard (Android SDK).
-2. On the tablet: Settings → About → tap Build number 7 times; then Developer options → USB debugging on. Connect it by USB and allow this PC.
-3. `npm run sync -w @tdjr/mobile` builds the web UI and copies it into the Android project.
-4. `npm run open -w @tdjr/mobile` opens Android Studio; pick the tablet and press Run.
-5. In the app: ⚙ → Request access… with `https://notes.tillmanjr.com`, then `sudo notes-admin approve <CODE>` on the droplet. Sign-in asks for a fingerprint, face or the screen lock.
+2. Install Java 21 (`winget install Microsoft.OpenJDK.21`). The build tools (Gradle 8.14) can't run on Android Studio's bundled Java 25. In Android Studio: Settings → Build, Execution, Deployment → Build Tools → Gradle → Gradle JDK → the Microsoft 21 JDK.
+3. On the tablet: Settings → About → tap Build number 7 times; then Developer options → USB debugging on. Connect it by USB and allow this PC.
+4. `npm run sync -w @tdjr/mobile` builds the web UI and copies it into the Android project.
+5. `npm run open -w @tdjr/mobile` opens Android Studio; pick the tablet and press Run. Or from PowerShell in `apps/mobile/android`, without Android Studio:
+   ```
+   $env:JAVA_HOME = "C:\Program Files\Microsoft\jdk-21.0.13.102-hotspot"; $env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
+   .\gradlew.bat installDebug
+   ```
+6. In the app: ⚙ → Request access… with `https://notes.tillmanjr.com`, then `sudo notes-admin approve <CODE>` on the droplet. Sign-in asks for a fingerprint, face or the screen lock.
 
 The first builds are debug builds, signed with Android Studio's own debug key. A release signing key (kept on this PC and in 1Password, never in the repo) comes when the app is used day to day.
 

@@ -137,6 +137,81 @@ describe('hierarchical tags', () => {
     await expect(store.moveTag(a.id, b.id)).rejects.toThrow()
   })
 
+  it('relocating a tag by path keeps its notes and sub-tags', async () => {
+    const nb = await store.createNotebook('NB')
+    const foo = await store.createTag('Foo')
+    const old = await store.createTag('Old', foo.id)
+    const n = await store.createNote(nb.id, 'x')
+    await store.setNoteTags(n.id, [foo.id])
+
+    // "Foo" → "Foo/Bar": the tag becomes Bar under a new Foo.
+    expect(await store.relocateTag(foo.id, 'Foo/Bar')).toEqual({ conflict: null })
+    let tags = await store.listTags()
+    expect(tagPath(tags, foo.id)).toBe('Foo/Bar')
+    expect(tagPath(tags, old.id)).toBe('Foo/Bar/Old')
+    expect((await store.getNote(n.id))?.tagIds).toEqual([foo.id])
+
+    // A path into existing tags moves it there; a single name moves it to the top level.
+    const fruit = await store.createTag('fruit')
+    await store.relocateTag(foo.id, 'Fruit/Citrus/Lemons')
+    tags = await store.listTags()
+    expect(tagPath(tags, foo.id)).toBe('fruit/Citrus/Lemons')
+    expect(tags.find((t) => t.id === foo.id)?.parentId).not.toBe(fruit.id)
+    await store.relocateTag(foo.id, ' lemons ')
+    expect(tagPath(await store.listTags(), foo.id)).toBe('lemons')
+  })
+
+  it('reports a path conflict without changing anything, and merges when asked', async () => {
+    const nb = await store.createNotebook('NB')
+    const ingredients = await store.createTag('Ingredients')
+    const lemons = await store.createTag('Lemons', ingredients.id)
+    const meyer = await store.createTag('Meyer', lemons.id)
+    const eureka = await store.createTag('Eureka', lemons.id)
+    const fruit = await store.createTag('Fruit')
+    const fruitLemons = await store.createTag('lemons', fruit.id)
+    const fruitMeyer = await store.createTag('meyer', fruitLemons.id)
+    const a = await store.createNote(nb.id, 'a')
+    const b = await store.createNote(nb.id, 'b')
+    const c = await store.createNote(nb.id, 'c')
+    await store.setNoteTags(a.id, [lemons.id])
+    await store.setNoteTags(b.id, [lemons.id, fruitLemons.id])
+    await store.setNoteTags(c.id, [meyer.id])
+
+    expect((await store.relocateTag(lemons.id, 'Fruit/Lemons')).conflict?.id).toBe(fruitLemons.id)
+    expect(tagPath(await store.listTags(), lemons.id)).toBe('Ingredients/Lemons')
+
+    expect(await store.relocateTag(lemons.id, 'Fruit/Lemons', { merge: true })).toEqual({ conflict: null })
+    const tags = await store.listTags()
+    expect(tags.map((t) => t.id)).not.toContain(lemons.id)
+    expect(tags.map((t) => t.id)).not.toContain(meyer.id)
+    expect(tagPath(tags, eureka.id)).toBe('Fruit/lemons/Eureka')
+    expect((await store.getNote(a.id))?.tagIds).toEqual([fruitLemons.id])
+    expect((await store.getNote(b.id))?.tagIds).toEqual([fruitLemons.id])
+    expect((await store.getNote(c.id))?.tagIds).toEqual([fruitMeyer.id])
+  })
+
+  it('moves a tag under another, with the same conflict rule', async () => {
+    const a = await store.createTag('a')
+    const b = await store.createTag('b')
+    const x = await store.createTag('x', a.id)
+    const bx = await store.createTag('X', b.id)
+    expect(await store.moveTag(a.id, b.id)).toEqual({ conflict: null })
+    expect(tagPath(await store.listTags(), x.id)).toBe('b/a/x')
+    expect((await store.moveTag(x.id, b.id)).conflict?.id).toBe(bx.id)
+    await store.moveTag(x.id, b.id, { merge: true })
+    expect((await store.listTags()).map((t) => t.id)).not.toContain(x.id)
+    await store.moveTag(a.id, null)
+    expect(tagPath(await store.listTags(), a.id)).toBe('a')
+  })
+
+  it('finds or creates a tag path', async () => {
+    const first = await store.findOrCreateTagPath('#Ingredients/Lemons')
+    const again = await store.findOrCreateTagPath('ingredients/ lemons /')
+    expect(first?.created).toBe(true)
+    expect(again).toEqual({ id: first!.id, created: false })
+    expect(await store.findOrCreateTagPath(' / ')).toBeNull()
+  })
+
   it('deleting a tag removes it and its descendants from notes', async () => {
     const nb = await store.createNotebook('NB')
     const a = await store.createTag('a')

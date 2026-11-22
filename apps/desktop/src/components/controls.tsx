@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 /** Text that turns into an input for editing; Enter/blur commits, Escape cancels. */
@@ -8,21 +8,31 @@ export function InlineEdit({
   onCommit,
   onCancel,
   placeholder,
+  editValue = value,
 }: {
   value: string
   editing: boolean
   onCommit: (v: string) => void
   onCancel: () => void
   placeholder?: string
+  /** What the box starts with, when it differs from what's shown (a tag's full path). Only its last "/" level is selected. */
+  editValue?: string
 }) {
-  const [draft, setDraft] = useState(value)
+  const [draft, setDraft] = useState(editValue)
   const ref = useRef<HTMLInputElement>(null)
-  useEffect(() => {
-    if (editing) {
-      setDraft(value)
-      requestAnimationFrame(() => ref.current?.select())
-    }
-  }, [editing, value])
+  // A fresh draft each time editing starts, set during render so the box never shows a stale one.
+  const [wasEditing, setWasEditing] = useState(editing)
+  if (editing !== wasEditing) {
+    setWasEditing(editing)
+    if (editing) setDraft(editValue)
+  }
+  // Focus as soon as the box exists (a layout effect, not the next frame, so the first keystrokes land in it).
+  useLayoutEffect(() => {
+    if (!editing) return
+    const from = editValue === value ? 0 : editValue.lastIndexOf('/') + 1
+    ref.current?.focus()
+    ref.current?.setSelectionRange(from, editValue.length)
+  }, [editing])
   if (!editing) return <span className="label">{value}</span>
   return (
     <input
@@ -33,7 +43,11 @@ export function InlineEdit({
       onChange={(e) => setDraft(e.target.value)}
       onClick={(e) => e.stopPropagation()}
       onKeyDown={(e) => {
-        if (e.key === 'Enter') onCommit(draft)
+        if (e.key === 'Enter') {
+          // Consumed here, so it can't also press a button in a dialog the commit opens (the tag merge prompt).
+          e.preventDefault()
+          onCommit(draft)
+        }
         else if (e.key === 'Escape') onCancel()
       }}
       onBlur={() => onCommit(draft)}

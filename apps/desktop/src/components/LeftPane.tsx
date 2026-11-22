@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
-import { buildTagTree, tagPath, type Id, type NoteCounts, type NoteMeta, type NoteSort, type NoteStore, type Notebook, type Tag, type TagNode } from '@tdjr/core'
+import { buildTagTree, descendantTagIds, tagPath, type Id, type NoteCounts, type NoteMeta, type NoteSort, type NoteStore, type Notebook, type Tag, type TagNode } from '@tdjr/core'
 import { ConfirmButton, ConfirmDialog, InlineEdit } from './controls'
 import { SettingsMenu, SyncIndicator, type SyncMenu } from './SettingsMenu'
 import { useTheme } from '../theme'
 import { Logo } from './Logo'
 import { NotesSection, type NotesPlacement } from './NotesSection'
 import { Section, useCollapsedSections } from './Section'
+import { useTagDrag, type TagDropTarget } from './useTagDrag'
 
 export type View = { kind: 'all' } | { kind: 'trash' } | { kind: 'notebook'; id: Id } | { kind: 'tag'; id: Id }
 
@@ -49,6 +50,8 @@ export function LeftPane({
   const [theme, setTheme] = useTheme()
   // Trashed-note count while the Empty Trash confirmation is open.
   const [emptying, setEmptying] = useState<number | null>(null)
+  // A rename or move that landed on an existing tag, waiting for the merge confirmation.
+  const [merging, setMerging] = useState<{ tag: Tag; into: Tag; apply: () => Promise<unknown> } | null>(null)
   const inTrash = view.kind === 'trash'
   // The current notebook / tag, echoed in its section header so it stays visible when collapsed.
   const selectedNotebook = view.kind === 'notebook' ? notebooks.find((n) => n.id === view.id)?.name : undefined
@@ -121,6 +124,31 @@ export function LeftPane({
       setEditing(tag.id)
     })
 
+  /** Renames or moves a tag; landing on an existing tag asks before merging the two. */
+  const relocate = (tag: Tag, attempt: (merge: boolean) => Promise<{ conflict: Tag | null }>) =>
+    run(async () => {
+      const { conflict } = await attempt(false)
+      if (conflict) setMerging({ tag, into: conflict, apply: () => attempt(true) })
+    })
+
+  // Drag a tag onto another to make it a sub-tag, or onto the Tags heading for the top level.
+  const { drag, start: startDrag } = useTagDrag(
+    (id, target) => {
+      const tag = tags.find((t) => t.id === id)
+      if (!tag) return false
+      if (target === 'top') return tag.parentId !== null
+      return target !== tag.parentId && !descendantTagIds(tags, id).includes(target)
+    },
+    (id, target) => {
+      const tag = tags.find((t) => t.id === id)
+      const parentId = target === 'top' ? null : target
+      if (!tag) return
+      if (parentId) setCollapsed((s) => new Set([...s].filter((c) => c !== parentId)))
+      void relocate(tag, (merge) => store.moveTag(id, parentId, { merge }))
+    },
+  )
+  const dropping = (target: TagDropTarget) => drag?.target === target
+
   const toggle = (id: Id) =>
     setCollapsed((s) => {
       const next = new Set(s)
@@ -136,9 +164,11 @@ export function LeftPane({
     return (
       <li key={tag.id}>
         <div
-          className={`row ${isActive(v) ? 'active' : ''}`}
+          className={`row ${isActive(v) ? 'active' : ''} ${dropping(tag.id) ? 'drop-target' : ''} ${drag?.id === tag.id ? 'dragged' : ''}`}
           // Names align with notebook rows; each level indents one step. The fold toggle hangs in the margin.
           style={{ paddingLeft: 12 + depth * 14 }}
+          data-tag-id={tag.id}
+          onPointerDown={(e) => editing !== tag.id && startDrag(tag.id, e)}
           onClick={() => select(v)}
           onDoubleClick={() => setEditing(tag.id)}
         >
@@ -157,17 +187,19 @@ export function LeftPane({
           ) : null}
           <InlineEdit
             value={tag.name}
+            // The full path: editing it renames the tag, moves it, or both ("Foo" → "Foo/Bar" puts Bar under a new Foo).
+            editValue={tagPath(tags, tag.id)}
             editing={editing === tag.id}
-            onCommit={(name) => {
+            onCommit={(path) => {
               setEditing(null)
-              if (name.trim() && name !== tag.name) void run(() => store.renameTag(tag.id, name))
+              if (path.trim() && path !== tagPath(tags, tag.id)) void relocate(tag, (merge) => store.relocateTag(tag.id, path, { merge }))
             }}
             onCancel={() => setEditing(null)}
           />
           <Count n={counts.tags[tag.id]} />
           <span className="row-actions">
             <button title="New sub-tag" onClick={(e) => (e.stopPropagation(), void addTag(tag.id))}>＋</button>
-            <button title="Rename" onClick={(e) => (e.stopPropagation(), setEditing(tag.id))}>✎</button>
+            <button title="Rename or move (edit its path)" onClick={(e) => (e.stopPropagation(), setEditing(tag.id))}>✎</button>
             <ConfirmButton
               label="🗑"
               confirmLabel="Delete?"
@@ -252,14 +284,20 @@ export function LeftPane({
         </Section>
 
         <Section
-          className="tags"
-          title={withSelection('Tags', selectedTag)}
+          className={`tags ${dropping('top') ? 'drop-top' : ''}`}
+          title={<span data-tag-drop="top">{withSelection('Tags', selectedTag)}</span>}
           collapsed={sections.isCollapsed('tags')}
           onToggle={() => toggleOneOf('tags')}
           actions={<button title="New tag" onClick={() => void addTag(null)}>＋</button>}
         >
           <ul>{tree.map((n) => renderTag(n, 0))}</ul>
           {tree.length === 0 && <div className="hint">No tags yet. Add one here or type a path like projects/house on a note.</div>}
+          {drag && (
+            <div className="tag-drag-ghost" style={{ left: drag.x + 12, top: drag.y + 8 }}>
+              # {tagPath(tags, drag.id)}
+              {drag.target && <span> → {drag.target === 'top' ? 'top level' : tagPath(tags, drag.target)}</span>}
+            </div>
+          )}
         </Section>
 
         {notesPlacement === 'left' && (
@@ -294,6 +332,20 @@ export function LeftPane({
           </button>
         </span>
       </div>
+      {merging && (
+        <ConfirmDialog
+          title="Merge tags"
+          message={`"${tagPath(tags, merging.into.id)}" already exists. Merge "${tagPath(tags, merging.tag.id)}" into it? Notes tagged with either keep the tag, and their sub-tags are combined. This can't be undone.`}
+          confirmLabel="Merge"
+          onCancel={() => setMerging(null)}
+          onConfirm={() => {
+            const { tag, into, apply } = merging
+            setMerging(null)
+            if (view.kind === 'tag' && view.id === tag.id) onView({ kind: 'tag', id: into.id })
+            void run(apply)
+          }}
+        />
+      )}
       {emptying !== null && (
         <ConfirmDialog
           title="Empty Trash"

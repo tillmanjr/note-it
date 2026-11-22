@@ -5,7 +5,7 @@ import { fromBase64, sha256Hex, toBase64 } from './encoding'
 import { SyncLedger } from './ledger'
 import type { Attachment, Id, NoteCounts, NoteMeta, NoteQuery, Notebook, Tag } from './model'
 import { MIGRATIONS } from './schema'
-import { cleanTagName, descendantTagIds, wouldCreateCycle } from './tagTree'
+import { cleanTagName, descendantTagIds, sameTagName, splitTagPath, wouldCreateCycle } from './tagTree'
 import type { KeyWrap, VaultKeyRecord } from './vault'
 
 /** Minimal SQL access implemented per platform (Tauri plugin-sql, Capacitor SQLite, node:sqlite in tests). */
@@ -187,10 +187,102 @@ export class NoteStore {
     await this.ledger.track('tag', id, ['name', 'updated_at'])
   }
 
-  async moveTag(id: Id, parentId: Id | null): Promise<void> {
-    if (wouldCreateCycle(await this.listTags(), id, parentId)) throw new Error('A tag cannot be moved under itself.')
-    await this.db.execute('UPDATE tag SET parent_id = ?, updated_at = ? WHERE id = ?', [parentId, this.now(), id])
-    await this.ledger.track('tag', id, ['parent_id', 'updated_at'])
+  /**
+   * Moves a tag (with its notes and sub-tags) under `parentId`, or to the top level. If a tag of the same name is
+   * already there, nothing changes and it comes back as `conflict`, unless `merge` is set: then the tag is merged into it.
+   */
+  async moveTag(id: Id, parentId: Id | null, { merge = false } = {}): Promise<{ conflict: Tag | null }> {
+    const tags = await this.listTags()
+    const tag = tags.find((t) => t.id === id)
+    if (!tag) return { conflict: null }
+    if (wouldCreateCycle(tags, id, parentId)) throw new Error('A tag cannot be moved under itself.')
+    return this.placeTag(tags, tag, parentId, tag.name, merge)
+  }
+
+  /**
+   * Gives a tag a new place and name from its full path ("fruit/citrus/lemons"), creating missing parents. The tag
+   * keeps its notes and sub-tags, so renaming top-level "foo" to "foo/bar" makes it "bar" under a new "foo".
+   * A tag already at that path comes back as `conflict` with nothing changed, unless `merge` is set.
+   */
+  async relocateTag(id: Id, path: string, { merge = false } = {}): Promise<{ conflict: Tag | null }> {
+    const parts = splitTagPath(path)
+    const tags = await this.listTags()
+    const tag = tags.find((t) => t.id === id)
+    if (!tag || parts.length === 0) return { conflict: null }
+    const name = parts.pop()!
+    // The parent path is looked up without the tag itself (and so without its sub-tags): "foo" → "foo/bar" needs a new "foo".
+    const others = tags.filter((t) => t.id !== id)
+    let parentId: Id | null = null
+    let missing = parts
+    for (const [i, part] of parts.entries()) {
+      const found = others.find((t) => t.parentId === parentId && sameTagName(t.name, part))
+      if (!found) break
+      parentId = found.id
+      missing = parts.slice(i + 1)
+    }
+    // A conflict needs the whole parent path to exist already, so check before creating anything.
+    if (missing.length === 0) return this.placeTag(tags, tag, parentId, name, merge)
+    for (const part of missing) parentId = (await this.createTag(part, parentId)).id
+    return this.placeTag(tags, tag, parentId, name, merge)
+  }
+
+  private async placeTag(tags: Tag[], tag: Tag, parentId: Id | null, name: string, merge: boolean): Promise<{ conflict: Tag | null }> {
+    const clean = cleanTagName(name) || 'tag'
+    const twin = tags.find((t) => t.id !== tag.id && t.parentId === parentId && sameTagName(t.name, clean))
+    if (twin) {
+      if (!merge) return { conflict: twin }
+      await this.mergeTag(tag.id, twin.id)
+      return { conflict: null }
+    }
+    if (tag.parentId === parentId && tag.name === clean) return { conflict: null }
+    await this.db.execute('UPDATE tag SET parent_id = ?, name = ?, updated_at = ? WHERE id = ?', [parentId, clean, this.now(), tag.id])
+    await this.ledger.track('tag', tag.id, ['parent_id', 'name', 'updated_at'])
+    return { conflict: null }
+  }
+
+  /**
+   * Merges `sourceId` into `targetId`: its notes get the target tag, its sub-tags move under the target (merging again
+   * where a sub-tag of the same name is already there), and the source tag is deleted.
+   */
+  async mergeTag(sourceId: Id, targetId: Id): Promise<void> {
+    if (sourceId === targetId) return
+    const tags = await this.listTags()
+    if (wouldCreateCycle(tags, sourceId, targetId)) throw new Error('A tag cannot be merged into its own sub-tag.')
+    const noteIds = await this.ids('SELECT note_id AS id FROM note_tag WHERE tag_id = ?', [sourceId])
+    await this.db.execute('INSERT OR IGNORE INTO note_tag (note_id, tag_id) SELECT note_id, ? FROM note_tag WHERE tag_id = ?', [targetId, sourceId])
+    await this.db.execute('DELETE FROM note_tag WHERE tag_id = ?', [sourceId])
+    for (const child of tags.filter((t) => t.parentId === sourceId)) {
+      const twin = tags.find((t) => t.parentId === targetId && sameTagName(t.name, child.name))
+      if (twin) {
+        await this.mergeTag(child.id, twin.id)
+      } else {
+        await this.db.execute('UPDATE tag SET parent_id = ?, updated_at = ? WHERE id = ?', [targetId, this.now(), child.id])
+        await this.ledger.track('tag', child.id, ['parent_id', 'updated_at'])
+      }
+    }
+    const t = this.now()
+    await this.db.execute('UPDATE tag SET deleted_at = ?, updated_at = ? WHERE id = ?', [t, t, sourceId])
+    await this.ledger.track('note', noteIds, ['tags'])
+    await this.ledger.track('tag', sourceId, ['deleted_at', 'updated_at'])
+  }
+
+  /** The tag at a path like "projects/house", creating any missing levels. Null for an empty path. */
+  async findOrCreateTagPath(path: string): Promise<{ id: Id; created: boolean } | null> {
+    const parts = splitTagPath(path)
+    if (parts.length === 0) return null
+    const tags = await this.listTags()
+    let parentId: Id | null = null
+    let created = false
+    for (const part of parts) {
+      const found = tags.find((t) => t.parentId === parentId && sameTagName(t.name, part))
+      if (found) {
+        parentId = found.id
+      } else {
+        parentId = (await this.createTag(part, parentId)).id
+        created = true
+      }
+    }
+    return { id: parentId!, created }
   }
 
   /** Deletes the tag and its descendants and removes them from notes. */

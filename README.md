@@ -2,6 +2,21 @@
 
 A personal, self-hosted notes service built to replace Evernote for one user. Notes are real rich text (true indents, nested lists, tables, checklists, inline styles), not Markdown. Every device keeps a full local copy, works offline and syncs through a small server.
 
+![The desktop app: notebooks, a tag tree and the notes list beside a recipe with a checklist, nested lists and a table](docs/images/desktop.png)
+
+<table>
+  <tr>
+    <td width="62%"><img src="docs/images/search-dark.png" alt="Search in the dark theme, with matches highlighted in each result"></td>
+    <td width="38%"><img src="docs/images/tablet.png" alt="The tablet app in portrait, with larger touch targets"></td>
+  </tr>
+  <tr>
+    <td>Search, in the dark theme</td>
+    <td>Tablet, portrait</td>
+  </tr>
+</table>
+
+<sub>Screenshots use made-up sample notes.</sub>
+
 ## Apps
 
 | App | Status |

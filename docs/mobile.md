@@ -39,4 +39,21 @@ The app answers the server in the WebAuthn format, like Windows Hello does, so *
 
 The first builds are debug builds, signed with Android Studio's own debug key. A release signing key (kept on this PC and in 1Password, never in the repo) comes when the app is used day to day.
 
-**Server side:** the droplet must allow the app's origin, `https://localhost` (in `deploy/files/notes.env`). Copy `deploy/` again, rerun `sudo bash deploy/02-install.sh <age public key>`, then `sudo systemctl restart notes-server`.
+**Server side (once, after merging):** the droplet must allow the app's origin, `https://localhost` (`CORS_ORIGINS` in `deploy/files/notes.env`). From PowerShell in the repo, on an up-to-date `main`:
+
+```
+age-keygen -y $HOME\.ssh\notes_backup.age
+scp -i ~/.ssh/notes_droplet -r deploy tillman@notes.tillmanjr.com:
+ssh -i ~/.ssh/notes_droplet tillman@notes.tillmanjr.com
+```
+
+The first line prints the backup public key (`age1…`, not secret). On the droplet:
+
+```
+sudo bash deploy/02-install.sh <that age1… key> [the same Let's Encrypt email as the first install, if you gave one]
+sudo systemctl restart notes-server
+sudo grep CORS_ORIGINS /etc/notes/env
+curl -s -o /dev/null -D - -X OPTIONS -H 'Origin: https://localhost' -H 'Access-Control-Request-Method: POST' https://notes.tillmanjr.com/health | grep -i access-control-allow-origin
+```
+
+The last line should print `access-control-allow-origin: https://localhost`.

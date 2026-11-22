@@ -15,6 +15,10 @@ A personal, self-hosted notes service built to replace Evernote for one user. No
   </tr>
 </table>
 
+**Notes list where you want it.** The list of notes can sit in the left-hand navigation (as in the first screenshot) or in a strip above the editor (below), which leaves the left pane for notebooks and tags. One click on the button at the right end of the Notes header swaps between the two, and the divider under the strip can be dragged to resize it. Each device remembers its choice.
+
+![The notes list shown in a strip above the editor, with the full tag tree in the left pane](docs/images/notes-above.png)
+
 <sub>Screenshots use made-up sample notes.</sub>
 
 ## Apps
@@ -30,6 +34,7 @@ A personal, self-hosted notes service built to replace Evernote for one user. No
 
 - **Rich-text editor** (TipTap) with headings, nested lists, checklists, tables, links, colors and highlights. Pasting from the web keeps the structure.
 - **Notebooks** (a note is in one notebook) and **hierarchical tags** (`Ingredients/Lemons`). Filtering by a tag includes its sub-tags. Tags can be renamed by full path, dragged to a new parent and merged.
+- **Notes list** in the left-hand navigation or above the editor, swapped with one click.
 - **Search** over titles and bodies, offline on every device (SQLite FTS5).
 - **Attachments and images**, stored by content hash.
 - **Trash**, plus delete forever (which syncs to every device).

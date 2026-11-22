@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Launch screen: the icon's blue (apps/desktop/app-icon.svg), with the white "N" in the middle. -->
+    <color name="launch_background">#FF2370B8</color>
+</resources>

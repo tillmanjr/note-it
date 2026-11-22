@@ -12,6 +12,16 @@ import type { KeyWrap, VaultKeyRecord } from './vault'
 export interface SqlDriver {
   execute(sql: string, params?: unknown[]): Promise<void>
   select<T>(sql: string, params?: unknown[]): Promise<T[]>
+  /**
+   * Runs the statements in order in one transaction (all or nothing), with as few round trips as the platform allows.
+   * Optional: without it they run one by one. Sync uses it to apply a pulled page quickly (docs/sync.md).
+   */
+  batch?(statements: SqlStatement[]): Promise<void>
+}
+
+export interface SqlStatement {
+  sql: string
+  params: unknown[]
 }
 
 /** Content-addressed file storage for attachments, implemented per platform. */

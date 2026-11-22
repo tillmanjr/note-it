@@ -25,6 +25,14 @@ Decided with the user on 2026-11-18. Builds on [design.md](design.md) and [miles
 - `apps/server`: Fastify, Postgres and `ws`. `sync.ts` holds the merge rules, `app.ts` the routes, `passkey.ts` access requests, passkeys and sessions, `admin.ts` the admin CLI.
 - `apps/desktop/src/sync.ts` (`useSync`), `SyncDialogs.tsx` and the ⚙ menu's Sync section.
 
+## Applying a pull quickly (2026-11-22)
+
+The tablet's first sync was slow, about 120 database calls a second. Every call crosses from the web view to Android, every write was its own commit to disk, and each pulled change took about six calls. Now each pulled page (up to 1000 changes) is applied with a few bulk reads up front and its writes in one batch (`SqlDriver.batch`, one transaction).
+
+- The tablet's driver sends a batch to Android in one call (`executeSet`), and the browser's runs it in a transaction. Tauri doesn't batch: its SQL plugin spreads statements over a connection pool, where a transaction can't be relied on, and the desktop is fast enough without it.
+- Measured in the e2e test, a first sync of 300 notes takes 6,056 database calls one at a time and 30 in batches, with the same result. The test checks both paths.
+- A page applied in a batch is all or nothing, so an interrupted first sync never leaves half a page behind.
+
 ## Running locally
 
 1. `npm run db:up -w @tdjr/server` starts Postgres in Docker on `127.0.0.1:5320` (this project's ports: 5318 desktop dev, 5319 sync server, 5320 Postgres).

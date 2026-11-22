@@ -20,6 +20,10 @@ export async function capacitorDriver(): Promise<SqlDriver> {
     async select<T>(sql: string, params: unknown[] = []) {
       return ((await db.query(sql, params as unknown[])).values ?? []) as T[]
     },
+    // One call across to Android for the whole batch, run there in one transaction.
+    async batch(statements) {
+      await db.executeSet(statements.map((st) => ({ statement: st.sql, values: st.params as unknown[] })), true)
+    },
   }
 }
 

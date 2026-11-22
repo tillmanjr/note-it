@@ -14,6 +14,11 @@ export async function browserDriver(): Promise<SqlDriver> {
     async select<T>(sql: string, params: unknown[] = []) {
       return db.exec({ sql, bind: params as never, rowMode: 'object', returnValue: 'resultRows' }) as T[]
     },
+    async batch(statements) {
+      db.transaction(() => {
+        for (const st of statements) db.exec({ sql: st.sql, bind: st.params as never })
+      })
+    },
   }
 }
 

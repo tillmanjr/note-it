@@ -51,16 +51,39 @@ async function prepareDatabase(): Promise<boolean> {
 
 const available = await prepareDatabase()
 
-function memoryDriver(): SqlDriver {
+/** Database calls a device made, to compare how many round trips a sync takes. */
+interface CallCount {
+  calls: number
+}
+
+/** An in-memory SQLite database, optionally with the batch call the tablet and browser drivers have. */
+function memoryDriver(opts: { batch?: boolean; count?: CallCount } = {}): SqlDriver {
   const db = new DatabaseSync(':memory:')
-  return {
+  const count = opts.count ?? { calls: 0 }
+  const driver: SqlDriver = {
     async execute(sql, params = []) {
+      count.calls++
       db.prepare(sql).run(...(params as never[]))
     },
     async select<T>(sql: string, params: unknown[] = []) {
+      count.calls++
       return db.prepare(sql).all(...(params as never[])) as T[]
     },
   }
+  if (opts.batch) {
+    driver.batch = async (statements) => {
+      count.calls++
+      db.exec('BEGIN')
+      try {
+        for (const st of statements) db.prepare(st.sql).run(...(st.params as never[]))
+        db.exec('COMMIT')
+      } catch (err) {
+        db.exec('ROLLBACK')
+        throw err
+      }
+    }
+  }
+  return driver
 }
 
 function memoryBlobs(): BlobStore & { files: Map<string, Uint8Array> } {
@@ -74,9 +97,9 @@ function memoryBlobs(): BlobStore & { files: Map<string, Uint8Array> } {
   }
 }
 
-async function newDevice() {
+async function newDevice(driver: { batch?: boolean; count?: CallCount } = {}) {
   const blobs = memoryBlobs()
-  const store = new NoteStore(memoryDriver(), blobs)
+  const store = new NoteStore(memoryDriver(driver), blobs)
   await store.migrate()
   return { store, blobs, passkeys: softPasskeys() }
 }
@@ -182,6 +205,45 @@ describe.skipIf(!available)('sync server end to end', () => {
     expect((await b.store.searchNotes('eggs')).map((h) => h.note.id)).toEqual([note.id])
     expect(b.blobs.files.get(att.hash)).toEqual(new Uint8Array([1, 2, 3, 4]))
     expect((await approvedDevices(pool)).map((d) => d.name)).toEqual(['Desktop', 'Phone'])
+  })
+
+  it('pulls a large first sync in a few batches, with the same result as one call at a time', async () => {
+    const a = await newDevice()
+    const nb = await a.store.createNotebook('Imported')
+    const tags = [await a.store.createTag('food'), await a.store.createTag('work')]
+    const ids: string[] = []
+    for (let i = 0; i < 300; i++) {
+      const note = await a.store.createNote(nb.id, `Note ${i}`)
+      await a.store.setNoteTags(note.id, [tags[i % 2].id])
+      await addParagraph(a.store, note.id, `Body of note ${i}`)
+      ids.push(note.id)
+    }
+    await a.store.purgeNote(ids[299])
+    const { client: ca } = await connect(a, 'Desktop')
+    await ca.syncNow()
+
+    const slowCalls: CallCount = { calls: 0 }
+    const fastCalls: CallCount = { calls: 0 }
+    const slow = await newDevice({ count: slowCalls })
+    const fast = await newDevice({ batch: true, count: fastCalls })
+    const { client: cs } = await connect(slow, 'Old way')
+    const { client: cf } = await connect(fast, 'Tablet')
+    slowCalls.calls = fastCalls.calls = 0
+    await cs.syncNow()
+    await cf.syncNow()
+    expect(cf.getStatus().state).toBe('idle')
+
+    const view = async (d: TestDevice) => ({
+      notes: (await d.store.queryNotes()).map((n) => [n.id, n.title, n.tagIds, n.snippet]).sort(),
+      hits: (await d.store.searchNotes('body')).length,
+    })
+    const expected = await view(slow)
+    expect(expected.notes).toHaveLength(299)
+    expect(await view(fast)).toEqual(expected)
+    expect(await textOf(fast.store, ids[7])).toBe('Body of note 7')
+    // About six calls per change one at a time; a handful per page of up to 1000 changes in batches.
+    expect(fastCalls.calls * 20).toBeLessThan(slowCalls.calls)
+    console.log(`first sync of 300 notes: ${slowCalls.calls} database calls one at a time, ${fastCalls.calls} batched`)
   })
 
   it('syncs vault keys, including a passphrase change, without the server seeing the passphrase', async () => {

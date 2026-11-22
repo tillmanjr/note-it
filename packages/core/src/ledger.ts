@@ -3,7 +3,7 @@ import * as Y from 'yjs'
 import { bodyText, snippetOf } from './bodyText'
 import { fromBase64, toBase64 } from './encoding'
 import { Hlc } from './hlc'
-import type { BlobStore, SqlDriver } from './store'
+import type { BlobStore, SqlDriver, SqlStatement } from './store'
 import { SYNC_FIELDS, type BodyUpdate, type RecordChange, type RecordKind } from './syncProtocol'
 
 // Sync bookkeeping in the local database (migration 2).
@@ -30,6 +30,8 @@ const PLACEHOLDER: Record<RecordKind, string> = {
   vault_key: `INSERT OR IGNORE INTO vault_key (id, wrap, created_at) VALUES (?, '', 0)`,
 }
 
+/** Ids per `IN (…)` query, under SQLite's limit of 999 bound parameters. */
+const IDS_PER_QUERY = 500
 /** SQLite allows at most 999 bound parameters per statement. */
 const ROWS_PER_INSERT = 200
 /** An empty Yjs update: nothing to send. */
@@ -125,15 +127,7 @@ export class SyncLedger {
 
   /** Deletes notes forever (no history, no search entry) and remembers them so they stay deleted. */
   async purgeNotes(ids: string[]): Promise<void> {
-    for (const id of ids) {
-      await this.db.execute('DELETE FROM note_fts WHERE rowid = (SELECT rid FROM note WHERE id = ?)', [id])
-      await this.db.execute('DELETE FROM note_update WHERE note_id = ?', [id])
-      await this.db.execute('DELETE FROM note_tag WHERE note_id = ?', [id])
-      await this.db.execute('DELETE FROM note WHERE id = ?', [id])
-      await this.db.execute('DELETE FROM body_state WHERE note_id = ?', [id])
-      await this.db.execute("DELETE FROM field_state WHERE kind = 'note' AND id = ? AND field <> 'purged'", [id])
-      await this.db.execute('INSERT OR IGNORE INTO purged_note (id) VALUES (?)', [id])
-    }
+    await this.write(ids.flatMap(purgeStatements))
   }
 
   // ---------- Push ----------
@@ -200,60 +194,96 @@ export class SyncLedger {
   }
 
   // ---------- Pull ----------
+  //
+  // A pulled page (up to 1000 changes) is applied with a few bulk reads up front and one batch of writes, rather
+  // than several database calls per change: on the tablet every call crosses from the web view to Android, and
+  // every write outside a transaction is its own commit to disk. Where the platform batches, a page is also all
+  // or nothing.
 
   /** Applies remote field changes that are newer than the local ones. */
   async applyRecords(changes: RecordChange[]): Promise<{ metadata: boolean; purged: string[] }> {
+    const valid = changes.filter((c) => SYNC_FIELDS[c.kind]?.includes(c.field))
+    for (const c of valid) this.clock?.observe(c.ts)
+    const fieldKey = (c: { kind: string; id: string; field: string }) => `${c.kind}|${c.id}|${c.field}`
+    const localTs = new Map<string, string>()
+    const states = await this.selectIn<{ kind: string; id: string; field: string; ts: string }>(
+      (marks) => `SELECT kind, id, field, ts FROM field_state WHERE id IN (${marks})`,
+      unique(valid.map((c) => c.id)),
+    )
+    for (const r of states) localTs.set(fieldKey(r), r.ts)
+    const noteIds = unique(valid.filter((c) => c.kind === 'note').map((c) => c.id))
+    const purgedIds = await this.purgedAmong(noteIds)
+    const notes = await this.notesAmong(noteIds)
+    const hasBlob = new Map<string, boolean>()
+
+    const writes: SqlStatement[] = []
     let metadata = false
     const purged: string[] = []
-    for (const c of changes) {
-      if (!SYNC_FIELDS[c.kind]?.includes(c.field)) continue
-      this.clock?.observe(c.ts)
-      if (c.kind === 'note' && c.field !== 'purged' && (await this.isPurged(c.id))) continue
-      const [local] = await this.db.select<{ ts: string }>(
-        'SELECT ts FROM field_state WHERE kind = ? AND id = ? AND field = ?',
-        [c.kind, c.id, c.field],
-      )
-      if (local && local.ts >= c.ts) continue
+    for (const c of valid) {
+      if (c.kind === 'note' && c.field !== 'purged' && purgedIds.has(c.id)) continue
+      const local = localTs.get(fieldKey(c))
+      if (local && local >= c.ts) continue
       if (c.kind === 'note' && c.field === 'purged') {
         if (c.value) {
-          await this.purgeNotes([c.id])
+          writes.push(...purgeStatements(c.id))
+          purgedIds.add(c.id)
+          notes.delete(c.id)
           purged.push(c.id)
         }
       } else {
-        await this.applyField(c)
+        if (c.kind === 'attachment' && !hasBlob.has(c.id)) hasBlob.set(c.id, await this.blobs.has(c.id))
+        writes.push(...fieldStatements(c, notes, hasBlob))
       }
-      await this.db.execute(
-        `INSERT INTO field_state (kind, id, field, ts, pending) VALUES (?, ?, ?, ?, 0)
+      writes.push({
+        sql: `INSERT INTO field_state (kind, id, field, ts, pending) VALUES (?, ?, ?, ?, 0)
          ON CONFLICT(kind, id, field) DO UPDATE SET ts = excluded.ts, pending = 0`,
-        [c.kind, c.id, c.field, c.ts],
-      )
+        params: [c.kind, c.id, c.field, c.ts],
+      })
+      localTs.set(fieldKey(c), c.ts)
       metadata = true
     }
+    await this.write(writes)
     return { metadata, purged }
   }
 
   /** Appends remote body updates and refreshes those notes' search text and snippets. */
   async applyBodies(updates: BodyUpdate[]): Promise<Map<string, Uint8Array[]>> {
+    const noteIds = unique(updates.map((u) => u.noteId))
+    const purgedIds = await this.purgedAmong(noteIds)
+    const notes = await this.notesAmong(noteIds)
     const touched = new Map<string, Uint8Array[]>()
+    const writes: SqlStatement[] = []
     for (const u of updates) {
-      if (await this.isPurged(u.noteId)) continue
-      await this.ensureNote(u.noteId)
-      await this.db.execute('INSERT INTO note_update (note_id, data) VALUES (?, ?)', [u.noteId, u.data])
+      if (purgedIds.has(u.noteId)) continue
+      writes.push(...ensureNoteStatements(u.noteId, notes))
+      writes.push({ sql: 'INSERT INTO note_update (note_id, data) VALUES (?, ?)', params: [u.noteId, u.data] })
       touched.set(u.noteId, [...(touched.get(u.noteId) ?? []), fromBase64(u.data)])
     }
-    for (const noteId of touched.keys()) {
-      const merged = await this.mergedBody(noteId)
-      if (!merged) continue
+    await this.write(writes)
+
+    // Each touched note's whole document, for its search text, snippet and state vector.
+    const stored = new Map<string, Uint8Array[]>()
+    const rows = await this.selectIn<{ note_id: string; data: string }>(
+      (marks) => `SELECT note_id, data FROM note_update WHERE note_id IN (${marks}) ORDER BY seq`,
+      [...touched.keys()],
+    )
+    for (const r of rows) stored.set(r.note_id, [...(stored.get(r.note_id) ?? []), fromBase64(r.data)])
+    const refresh: SqlStatement[] = []
+    for (const [noteId, parts] of stored) {
+      const merged = Y.mergeUpdates(parts)
       const text = bodyText(merged)
-      await this.db.execute('UPDATE note SET snippet = ? WHERE id = ?', [snippetOf(text), noteId])
-      await this.db.execute('UPDATE note_fts SET body = ? WHERE rowid = (SELECT rid FROM note WHERE id = ?)', [text, noteId])
-      // With no local edits pending, the server has exactly this document.
-      await this.db.execute(
-        `INSERT INTO body_state (note_id, dirty, server_sv) VALUES (?, 0, ?)
+      refresh.push(
+        { sql: 'UPDATE note SET snippet = ? WHERE id = ?', params: [snippetOf(text), noteId] },
+        { sql: 'UPDATE note_fts SET body = ? WHERE rowid = (SELECT rid FROM note WHERE id = ?)', params: [text, noteId] },
+        // With no local edits pending, the server has exactly this document.
+        {
+          sql: `INSERT INTO body_state (note_id, dirty, server_sv) VALUES (?, 0, ?)
          ON CONFLICT(note_id) DO UPDATE SET server_sv = CASE WHEN dirty = 0 THEN excluded.server_sv ELSE server_sv END`,
-        [noteId, toBase64(Y.encodeStateVectorFromUpdate(merged))],
+          params: [noteId, toBase64(Y.encodeStateVectorFromUpdate(merged))],
+        },
       )
     }
+    await this.write(refresh)
     return touched
   }
 
@@ -322,33 +352,34 @@ export class SyncLedger {
     return rows.length > 0
   }
 
-  private async ensureNote(id: string): Promise<void> {
-    const rows = await this.db.select('SELECT 1 FROM note WHERE id = ?', [id])
-    if (rows.length > 0) return
-    await this.db.execute(PLACEHOLDER.note, [id])
-    await this.db.execute("INSERT INTO note_fts (rowid, title, body) VALUES ((SELECT rid FROM note WHERE id = ?), '', '')", [id])
-  }
-
-  private async applyField(c: RecordChange): Promise<void> {
-    const { table, key } = TABLE[c.kind]
-    if (c.kind === 'note') await this.ensureNote(c.id)
-    else await this.db.execute(PLACEHOLDER[c.kind], [c.id])
-
-    if (c.kind === 'note' && c.field === 'tags') {
-      await this.db.execute('DELETE FROM note_tag WHERE note_id = ?', [c.id])
-      for (const tagId of new Set(Array.isArray(c.value) ? (c.value as string[]) : [])) {
-        await this.db.execute('INSERT INTO note_tag (note_id, tag_id) VALUES (?, ?)', [c.id, tagId])
-      }
+  /** Runs writes as one batch where the platform supports it, else one by one. */
+  private async write(statements: SqlStatement[]): Promise<void> {
+    if (statements.length === 0) return
+    if (this.db.batch) {
+      await this.db.batch(statements)
       return
     }
-    // The field name is one of SYNC_FIELDS (checked by the caller), so it is safe as a column name.
-    await this.db.execute(`UPDATE ${table} SET ${c.field} = ? WHERE ${key} = ?`, [c.value ?? null, c.id])
-    if (c.kind === 'note' && c.field === 'title') {
-      await this.db.execute('UPDATE note_fts SET title = ? WHERE rowid = (SELECT rid FROM note WHERE id = ?)', [c.value ?? '', c.id])
+    for (const st of statements) await this.db.execute(st.sql, st.params)
+  }
+
+  /** A query with an `IN (…)` list, run in chunks that stay under SQLite's parameter limit. */
+  private async selectIn<T>(sql: (marks: string) => string, ids: string[]): Promise<T[]> {
+    const out: T[] = []
+    for (let i = 0; i < ids.length; i += IDS_PER_QUERY) {
+      const chunk = ids.slice(i, i + IDS_PER_QUERY)
+      out.push(...(await this.db.select<T>(sql(chunk.map(() => '?').join(',')), chunk)))
     }
-    if (c.kind === 'attachment' && !(await this.blobs.has(c.id))) {
-      await this.db.execute('INSERT OR IGNORE INTO blob_missing (hash) VALUES (?)', [c.id])
-    }
+    return out
+  }
+
+  private async purgedAmong(noteIds: string[]): Promise<Set<string>> {
+    const rows = await this.selectIn<{ id: string }>((marks) => `SELECT id FROM purged_note WHERE id IN (${marks})`, noteIds)
+    return new Set(rows.map((r) => r.id))
+  }
+
+  private async notesAmong(noteIds: string[]): Promise<Set<string>> {
+    const rows = await this.selectIn<{ id: string }>((marks) => `SELECT id FROM note WHERE id IN (${marks})`, noteIds)
+    return new Set(rows.map((r) => r.id))
   }
 
   private async valueOf(
@@ -377,4 +408,51 @@ export class SyncLedger {
     const rows = await this.db.select<{ data: string }>('SELECT data FROM note_update WHERE note_id = ? ORDER BY seq', [noteId])
     return rows.length ? Y.mergeUpdates(rows.map((r) => fromBase64(r.data))) : null
   }
+}
+
+const unique = (ids: string[]) => [...new Set(ids)]
+
+/** Removes a note for good, keeping only the tombstone that stops it coming back. */
+function purgeStatements(id: string): SqlStatement[] {
+  return [
+    { sql: 'DELETE FROM note_fts WHERE rowid = (SELECT rid FROM note WHERE id = ?)', params: [id] },
+    { sql: 'DELETE FROM note_update WHERE note_id = ?', params: [id] },
+    { sql: 'DELETE FROM note_tag WHERE note_id = ?', params: [id] },
+    { sql: 'DELETE FROM note WHERE id = ?', params: [id] },
+    { sql: 'DELETE FROM body_state WHERE note_id = ?', params: [id] },
+    { sql: "DELETE FROM field_state WHERE kind = 'note' AND id = ? AND field <> 'purged'", params: [id] },
+    { sql: 'INSERT OR IGNORE INTO purged_note (id) VALUES (?)', params: [id] },
+  ]
+}
+
+/** A placeholder note (and its search row), unless `notes`, the notes known to exist here, already has it. */
+function ensureNoteStatements(id: string, notes: Set<string>): SqlStatement[] {
+  if (notes.has(id)) return []
+  notes.add(id)
+  return [
+    { sql: PLACEHOLDER.note, params: [id] },
+    { sql: "INSERT INTO note_fts (rowid, title, body) VALUES ((SELECT rid FROM note WHERE id = ?), '', '')", params: [id] },
+  ]
+}
+
+/** Writes one remote field value into the real tables. `hasBlob` says which attachment files are already here. */
+function fieldStatements(c: RecordChange, notes: Set<string>, hasBlob: Map<string, boolean>): SqlStatement[] {
+  const { table, key } = TABLE[c.kind]
+  const out = c.kind === 'note' ? ensureNoteStatements(c.id, notes) : [{ sql: PLACEHOLDER[c.kind], params: [c.id] }]
+  if (c.kind === 'note' && c.field === 'tags') {
+    out.push({ sql: 'DELETE FROM note_tag WHERE note_id = ?', params: [c.id] })
+    for (const tagId of new Set(Array.isArray(c.value) ? (c.value as string[]) : [])) {
+      out.push({ sql: 'INSERT INTO note_tag (note_id, tag_id) VALUES (?, ?)', params: [c.id, tagId] })
+    }
+    return out
+  }
+  // The field name is one of SYNC_FIELDS (checked by the caller), so it is safe as a column name.
+  out.push({ sql: `UPDATE ${table} SET ${c.field} = ? WHERE ${key} = ?`, params: [c.value ?? null, c.id] })
+  if (c.kind === 'note' && c.field === 'title') {
+    out.push({ sql: 'UPDATE note_fts SET title = ? WHERE rowid = (SELECT rid FROM note WHERE id = ?)', params: [c.value ?? '', c.id] })
+  }
+  if (c.kind === 'attachment' && !hasBlob.get(c.id)) {
+    out.push({ sql: 'INSERT OR IGNORE INTO blob_missing (hash) VALUES (?)', params: [c.id] })
+  }
+  return out
 }

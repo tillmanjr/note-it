@@ -32,6 +32,7 @@ The tablet's first sync was slow, about 120 database calls a second. Every call 
 - The tablet's driver sends a batch to Android in one call (`executeSet`), and the browser's runs it in a transaction. Tauri doesn't batch: its SQL plugin spreads statements over a connection pool, where a transaction can't be relied on, and the desktop is fast enough without it.
 - Measured in the e2e test, a first sync of 300 notes takes 6,056 database calls one at a time and 30 in batches, with the same result. The test checks both paths.
 - A page applied in a batch is all or nothing, so an interrupted first sync never leaves half a page behind.
+- On the tablet (Galaxy Tab S10+, debug build), a first sync of the real data took about 10 seconds after sign-in: notes, tags and bodies in about 3 seconds with about 140 database calls, then 36 attachments (10 MB) in about 6 more.
 
 ## Running locally
 

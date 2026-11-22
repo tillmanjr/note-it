@@ -1,6 +1,6 @@
 # Where we are
 
-Checkpoint: 2026-11-19.
+Checkpoint: 2026-11-22.
 
 ## Done
 - **Milestone 1:** editor spike (`spike/editor`, frozen). See [editor-spike.md](editor-spike.md).
@@ -65,7 +65,11 @@ Details are in [milestone-2.md](milestone-2.md); the overall plan is in [design.
 ## Next (not started; wait for the user's go-ahead)
 Now: more UI streamlining from the user.
 
-**In progress: milestone 3, Android tablet (branch `feature/mobile`).** Design and build steps in [mobile.md](mobile.md). Done: device-key sign-in (Keystore key framed as a passkey, tested end to end against the server), Capacitor project with the Keystore and Share to Notes plugins, the tablet storage adapter, touch sizing. Next: the user installs Android Studio; then build, install over USB, and test on the tablet. Then iPhone.
+**Milestone 3, mobile.** Design and build steps in [mobile.md](mobile.md).
+- **Android tablet (2026-11-22):** installed over USB on the Galaxy Tab S10+, signed in with its Keystore key and synced to the droplet. First sync of the real data takes about 10 seconds (see [sync.md](sync.md)). Still to check on the tablet: vault, attachments, Share to Notes, and signing in again after relaunch.
+- **Tag paths, moving and merging (2026-11-22):** see [tags.md](tags.md).
+- **Next: iPhone.** Expected to match the Android app feature for feature, insofar as Apple's guidelines allow. Plan: code and the iOS project on this PC; the Mac Mini as an SSH build machine (Xcode, simulator, signing). It needs the Apple Developer account renewed (the user is checking).
+- **Dependabot alert #1 (glib):** Linux-only GTK dependency of Tauri, not in the Windows build; recommended dismissing as not used. `libsqlite3-sys` (bundled SQLite CVE) waits on Tauri's SQL plugin moving to sqlx 0.9.
 
 ## How to run
 - Install gitleaks (`winget install Gitleaks.Gitleaks`); the pre-commit hook needs it.
